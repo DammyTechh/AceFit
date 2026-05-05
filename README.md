@@ -17,21 +17,6 @@ cp .env.example .env
 npm run dev
 ```
 
----
-
-## 🔐 ADMIN ACCESS
-
-**URL:** `yoursite.com/admin`
-
-| Field | Value |
-|---|---|
-| Email | `Acefitandgainz@gmail.com` |
-| Password | `AceFit@Admin2025!` |
-
-> **Demo mode:** Just enter the email (no password needed). Password only required after Supabase is configured.
-
----
-
 ## 🗄️ DATABASE SETUP (Supabase)
 
 1. Create project at [supabase.com](https://supabase.com)
