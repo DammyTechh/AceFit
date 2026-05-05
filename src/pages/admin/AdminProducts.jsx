@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Search, Edit2, Trash2, X, Upload, Loader, Package, Eye, EyeOff, ImageIcon } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useStore } from '../../lib/store'
+import { getPlaceholder } from '../../lib/placeholders'
 import toast from 'react-hot-toast'
 
 const CATEGORIES = ['tshirts', 'joggers', 'hoodies', 'shorts', 'leggings', 'sports-bra', 'tank-tops', 'tracksuits', 'accessories']
@@ -34,15 +35,24 @@ export default function AdminProducts() {
   const loadProducts = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-      if (data?.length) setProducts(data)
-    } catch {} finally { setLoading(false) }
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setProducts(data || [])
+    } catch (err) {
+      console.error('Load products failed:', err)
+      toast.error(`Couldn't load products: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const openModal = (product = null) => {
     if (product) {
       setEditProduct(product)
-      setForm({ ...EMPTY_FORM, ...product, sizes: product.sizes || ['S','M','L','XL'] })
+      setForm({ ...EMPTY_FORM, ...product, sizes: product.sizes || ['S', 'M', 'L', 'XL'] })
       setImagePreview(product.image_url || '')
     } else {
       setEditProduct(null)
@@ -56,28 +66,33 @@ export default function AdminProducts() {
     if (!file) return
     setUploadingImg(true)
     try {
-      // Try Supabase Storage
       const ext = file.name.split('.').pop()
       const path = `products/${Date.now()}.${ext}`
-      const { data, error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true })
-      if (error) throw error
-      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
+      const { error: upErr } = await supabase.storage
+        .from('product-images')
+        .upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(path)
+
       setForm(f => ({ ...f, image_url: publicUrl }))
       setImagePreview(publicUrl)
       toast.success('Image uploaded!')
-    } catch {
-      // Fallback: use object URL for preview only
-      const url = URL.createObjectURL(file)
-      setImagePreview(url)
-      setForm(f => ({ ...f, image_url: url }))
-      toast('Image preview set (configure Supabase Storage for production)', { icon: 'ℹ️' })
+    } catch (err) {
+      console.error('Image upload failed:', err)
+      toast.error(`Upload failed: ${err.message}. Check Storage bucket policies.`, { duration: 6000 })
     } finally {
       setUploadingImg(false)
     }
   }
 
   const handleSave = async () => {
-    if (!form.name || !form.price) { toast.error('Name and price are required'); return }
+    if (!form.name || !form.price) {
+      toast.error('Name and price are required')
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -85,52 +100,70 @@ export default function AdminProducts() {
         price: Number(form.price),
         original_price: form.original_price ? Number(form.original_price) : null,
         stock: Number(form.stock) || 0,
+        rating: Number(form.rating) || 4.5,
       }
 
       if (editProduct) {
-        const { error } = await supabase.from('products').update(payload).eq('id', editProduct.id)
+        const { data, error } = await supabase
+          .from('products')
+          .update(payload)
+          .eq('id', editProduct.id)
+          .select()
+          .single()
         if (error) throw error
-        setProducts(ps => ps.map(p => p.id === editProduct.id ? { ...p, ...payload } : p))
+        setProducts(ps => ps.map(p => p.id === editProduct.id ? data : p))
         toast.success('Product updated!')
       } else {
-        const { data, error } = await supabase.from('products').insert([payload]).select().single()
+        const { data, error } = await supabase
+          .from('products')
+          .insert([payload])
+          .select()
+          .single()
         if (error) throw error
-        setProducts(ps => [data || { ...payload, id: Date.now().toString() }, ...ps])
+        setProducts(ps => [data, ...ps])
         toast.success('Product added!')
       }
       setShowModal(false)
-    } catch {
-      // Demo fallback
-      if (editProduct) {
-        setProducts(ps => ps.map(p => p.id === editProduct.id ? { ...p, ...form, price: Number(form.price) } : p))
-      } else {
-        setProducts(ps => [{ ...form, id: Date.now().toString(), price: Number(form.price) }, ...ps])
-      }
-      toast.success(editProduct ? 'Product updated! (demo)' : 'Product added! (demo)')
-      setShowModal(false)
+    } catch (err) {
+      console.error('Save product failed:', err)
+      toast.error(`Save failed: ${err.message}`, { duration: 6000 })
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this product?')) return
+    if (!confirm('Delete this product? This cannot be undone.')) return
     try {
-      await supabase.from('products').delete().eq('id', id)
-    } catch {}
-    setProducts(ps => ps.filter(p => p.id !== id))
-    toast.success('Product deleted')
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (error) throw error
+      setProducts(ps => ps.filter(p => p.id !== id))
+      toast.success('Product deleted')
+    } catch (err) {
+      console.error('Delete failed:', err)
+      toast.error(`Delete failed: ${err.message}`)
+    }
   }
 
   const toggleActive = async (product) => {
     try {
-      await supabase.from('products').update({ is_active: !product.is_active }).eq('id', product.id)
-    } catch {}
-    setProducts(ps => ps.map(p => p.id === product.id ? { ...p, is_active: !p.is_active } : p))
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: !product.is_active })
+        .eq('id', product.id)
+      if (error) throw error
+      setProducts(ps => ps.map(p => p.id === product.id ? { ...p, is_active: !p.is_active } : p))
+      toast.success(product.is_active ? 'Product hidden' : 'Product visible')
+    } catch (err) {
+      console.error('Toggle failed:', err)
+      toast.error(`Toggle failed: ${err.message}`)
+    }
   }
 
   const filtered = products.filter(p =>
-    !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.category?.includes(search.toLowerCase())
+    !search ||
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.category?.includes(search.toLowerCase())
   )
 
   const toggleSize = (size) => {
@@ -167,124 +200,135 @@ export default function AdminProducts() {
         />
       </div>
 
-      {/* Products — mobile cards + desktop table */}
-      <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader size={20} className="animate-spin text-brand-orange" />
+        </div>
+      )}
 
-        {/* Mobile cards */}
-        <div className="md:hidden divide-y divide-[#242424]">
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <Package size={28} className={`mx-auto mb-2 ${isDark?'text-gray-700':'text-gray-300'}`}/>
-              <p className={`text-sm ${isDark?'text-gray-500':'text-gray-400'}`}>No products yet. Add your first product!</p>
-            </div>
-          ) : filtered.map((product) => (
-            <div key={product.id} className={`flex items-center gap-3 p-4 ${isDark?'':'border-gray-100'}`}>
-              <div className="w-14 h-16 rounded-xl overflow-hidden bg-gray-800 shrink-0">
-                <img src={product.image_url || getPlaceholder(product.category)} alt={product.name}
-                  className="w-full h-full object-cover object-top"
-                  onError={e=>{e.target.src=getPlaceholder(product.category)}}/>
+      {/* Products — mobile cards + desktop table */}
+      {!loading && (
+        <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-[#242424]">
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center">
+                <Package size={28} className={`mx-auto mb-2 ${isDark ? 'text-gray-700' : 'text-gray-300'}`} />
+                <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No products yet. Add your first product!</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className={`font-semibold text-sm truncate ${isDark?'text-white':'text-gray-900'}`}>{product.name}</p>
-                <p className="text-brand-orange font-bold text-sm">₦{Number(product.price).toLocaleString()}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] capitalize ${isDark?'text-gray-500':'text-gray-400'}`}>{product.category}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${product.is_active?'badge-success':'badge-danger'}`}>
-                    {product.is_active?'Active':'Hidden'}
-                  </span>
+            ) : filtered.map((product) => (
+              <div key={product.id} className={`flex items-center gap-3 p-4 ${isDark ? '' : 'border-gray-100'}`}>
+                <div className="w-14 h-16 rounded-xl overflow-hidden bg-gray-800 shrink-0">
+                  <img
+                    src={product.image_url || getPlaceholder(product.category)}
+                    alt={product.name}
+                    className="w-full h-full object-cover object-top"
+                    onError={e => { e.target.src = getPlaceholder(product.category) }}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{product.name}</p>
+                  <p className="text-brand-orange font-bold text-sm">₦{Number(product.price).toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-[10px] capitalize ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{product.category}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${product.is_active ? 'badge-success' : 'badge-danger'}`}>
+                      {product.is_active ? 'Active' : 'Hidden'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <button onClick={() => openModal(product)} className={`p-1.5 rounded-lg ${isDark ? 'text-gray-400 hover:text-brand-orange' : 'text-gray-500 hover:text-brand-orange'}`}><Edit2 size={14} /></button>
+                  <button onClick={() => handleDelete(product.id)} className={`p-1.5 rounded-lg ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-500'}`}><Trash2 size={14} /></button>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <button onClick={()=>openModal(product)} className={`p-1.5 rounded-lg ${isDark?'text-gray-400 hover:text-brand-orange':'text-gray-500 hover:text-brand-orange'}`}><Edit2 size={14}/></button>
-                <button onClick={()=>handleDelete(product.id)} className={`p-1.5 rounded-lg ${isDark?'text-gray-400 hover:text-red-400':'text-gray-500 hover:text-red-500'}`}><Trash2 size={14}/></button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Desktop table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={`text-xs uppercase tracking-wider border-b ${isDark ? 'bg-black/30 text-gray-500 border-brand-dark-border' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
-                <th className="px-5 py-3 text-left">Product</th>
-                <th className="px-5 py-3 text-left hidden md:table-cell">Category</th>
-                <th className="px-5 py-3 text-right">Price</th>
-                <th className="px-5 py-3 text-center hidden md:table-cell">Stock</th>
-                <th className="px-5 py-3 text-center">Status</th>
-                <th className="px-5 py-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((product, i) => (
-                <motion.tr
-                  key={product.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.04 }}
-                  className={`border-t ${isDark ? 'border-brand-dark-border hover:bg-white/[0.02]' : 'border-gray-50 hover:bg-gray-50/50'}`}
-                >
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-14 rounded-xl overflow-hidden bg-gray-800 shrink-0">
-                        <img
-                          src={product.image_url || 'https://i.imgur.com/YmQ8fjQ.png'}
-                          alt={product.name}
-                          className="w-full h-full object-cover object-top"
-                          onError={e => { e.target.src = 'https://i.imgur.com/YmQ8fjQ.png' }}
-                        />
-                      </div>
-                      <div>
-                        <p className={`font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{product.name}</p>
-                        <div className="flex gap-1 mt-0.5">
-                          {product.is_new && <span className="badge-info text-[9px] px-1.5 py-0.5 rounded-full">NEW</span>}
-                          {product.is_bestseller && <span className="badge-warning text-[9px] px-1.5 py-0.5 rounded-full">HOT</span>}
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={`text-xs uppercase tracking-wider border-b ${isDark ? 'bg-black/30 text-gray-500 border-brand-dark-border' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
+                  <th className="px-5 py-3 text-left">Product</th>
+                  <th className="px-5 py-3 text-left hidden md:table-cell">Category</th>
+                  <th className="px-5 py-3 text-right">Price</th>
+                  <th className="px-5 py-3 text-center hidden md:table-cell">Stock</th>
+                  <th className="px-5 py-3 text-center">Status</th>
+                  <th className="px-5 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((product, i) => (
+                  <motion.tr
+                    key={product.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.04 }}
+                    className={`border-t ${isDark ? 'border-brand-dark-border hover:bg-white/[0.02]' : 'border-gray-50 hover:bg-gray-50/50'}`}
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-14 rounded-xl overflow-hidden bg-gray-800 shrink-0">
+                          <img
+                            src={product.image_url || getPlaceholder(product.category)}
+                            alt={product.name}
+                            className="w-full h-full object-cover object-top"
+                            onError={e => { e.target.src = getPlaceholder(product.category) }}
+                          />
+                        </div>
+                        <div>
+                          <p className={`font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{product.name}</p>
+                          <div className="flex gap-1 mt-0.5">
+                            {product.is_new && <span className="badge-info text-[9px] px-1.5 py-0.5 rounded-full">NEW</span>}
+                            {product.is_bestseller && <span className="badge-warning text-[9px] px-1.5 py-0.5 rounded-full">HOT</span>}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className={`px-5 py-3 capitalize hidden md:table-cell ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{product.category}</td>
-                  <td className={`px-5 py-3 text-right font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>₦{Number(product.price).toLocaleString()}</td>
-                  <td className="px-5 py-3 text-center hidden md:table-cell">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      product.stock === 0 ? 'badge-danger' : product.stock <= 5 ? 'badge-warning' : 'badge-success'
-                    }`}>
-                      {product.stock === 0 ? 'Out' : product.stock}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-center">
-                    <button onClick={() => toggleActive(product)}>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${product.is_active ? 'badge-success' : 'badge-danger'}`}>
-                        {product.is_active ? 'Active' : 'Hidden'}
+                    </td>
+                    <td className={`px-5 py-3 capitalize hidden md:table-cell ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{product.category}</td>
+                    <td className={`px-5 py-3 text-right font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>₦{Number(product.price).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-center hidden md:table-cell">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        product.stock === 0 ? 'badge-danger' : product.stock <= 5 ? 'badge-warning' : 'badge-success'
+                      }`}>
+                        {product.stock === 0 ? 'Out' : product.stock}
                       </span>
-                    </button>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button onClick={() => openModal(product)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-brand-orange hover:bg-brand-orange/10' : 'text-gray-500 hover:text-brand-orange hover:bg-brand-orange/5'}`}>
-                        <Edit2 size={14} />
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <button onClick={() => toggleActive(product)}>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${product.is_active ? 'badge-success' : 'badge-danger'}`}>
+                          {product.is_active ? 'Active' : 'Hidden'}
+                        </span>
                       </button>
-                      <button onClick={() => toggleActive(product)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10' : 'text-gray-500 hover:text-yellow-500 hover:bg-yellow-50'}`}>
-                        {product.is_active ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                      <button onClick={() => handleDelete(product.id)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-red-400 hover:bg-red-400/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'}`}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-          {/* end table */}
-          {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <Package size={32} className={`mx-auto mb-3 ${isDark ? 'text-gray-700' : 'text-gray-300'}`} />
-              <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>No products found</p>
-            </div>
-          )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => openModal(product)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-brand-orange hover:bg-brand-orange/10' : 'text-gray-500 hover:text-brand-orange hover:bg-brand-orange/5'}`}>
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => toggleActive(product)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10' : 'text-gray-500 hover:text-yellow-500 hover:bg-yellow-50'}`}>
+                          {product.is_active ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                        <button onClick={() => handleDelete(product.id)} className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-red-400 hover:bg-red-400/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-50'}`}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <div className="py-16 text-center">
+                <Package size={32} className={`mx-auto mb-3 ${isDark ? 'text-gray-700' : 'text-gray-300'}`} />
+                <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>No products found</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Add/Edit Modal */}
       <AnimatePresence>
