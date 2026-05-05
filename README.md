@@ -4,7 +4,7 @@ A production-ready full-stack e-commerce web app.
 
 ---
 
-## 🚀 QUICK START (3 steps)
+## 🚀 QUICK START 
 
 ```bash
 # 1. Install
