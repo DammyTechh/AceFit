@@ -39,8 +39,8 @@ npm run dev
 3. Go to **Authentication → Providers → Email** → Enable **"Email OTP"** (important!)
 4. Go to **Storage** → Create bucket `product-images` → set to **Public**
 5. Create admin user: **Authentication → Users → Add User**
-   - Email: `Acefitandgainz@gmail.com`
-   - Password: `AceFit@Admin2025!`
+   - Email: `your mail`
+   - Password: `your password`
 
 ---
 
