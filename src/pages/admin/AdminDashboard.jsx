@@ -1,234 +1,177 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, ShoppingCart, Users, Package, Star, MessageSquare, ArrowUpRight, RefreshCw } from 'lucide-react'
+import { ShoppingBag, Users, TrendingUp, Package, Clock, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useStore } from '../../lib/store'
+import { Link } from 'react-router-dom'
 
-const STATUS_BADGE = {
-  delivered:  'badge-success',
-  processing: 'badge-info',
-  shipped:    'badge-warning',
-  pending:    'badge-warning',
-  cancelled:  'badge-danger',
+const StatCard = ({ icon: Icon, label, value, sub, color = 'orange', loading }) => (
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+    className="bg-[#141414] rounded-2xl border border-[#2A2A2A] p-5">
+    <div className="flex items-center justify-between mb-4">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color === 'orange' ? 'bg-brand-orange/15' : color === 'green' ? 'bg-green-500/15' : color === 'blue' ? 'bg-blue-500/15' : 'bg-purple-500/15'}`}>
+        <Icon size={18} className={color === 'orange' ? 'text-brand-orange' : color === 'green' ? 'text-green-400' : color === 'blue' ? 'text-blue-400' : 'text-purple-400'}/>
+      </div>
+    </div>
+    {loading ? <div className="h-7 w-20 bg-[#2A2A2A] rounded animate-pulse"/> : <p className="text-white text-2xl font-bold mb-0.5">{value}</p>}
+    <p className="text-gray-500 text-xs">{label}</p>
+    {sub && <p className={`text-xs mt-1 ${color === 'green' ? 'text-green-400' : 'text-brand-orange'}`}>{sub}</p>}
+  </motion.div>
+)
+
+const STATUS_COLOR = {
+  pending: 'text-yellow-400 bg-yellow-400/10',
+  processing: 'text-blue-400 bg-blue-400/10',
+  packed: 'text-purple-400 bg-purple-400/10',
+  shipped: 'text-cyan-400 bg-cyan-400/10',
+  out_for_delivery: 'text-orange-400 bg-orange-400/10',
+  delivered: 'text-green-400 bg-green-400/10',
+  cancelled: 'text-red-400 bg-red-400/10',
 }
 
 export default function AdminDashboard() {
-  const { theme } = useStore()
-  const isDark = theme === 'dark'
-  const [stats, setStats]           = useState({ revenue: 0, orders: 0, customers: 0, products: 0, tickets: 0, avgRating: '—' })
+  const [stats, setStats] = useState(null)
   const [recentOrders, setRecentOrders] = useState([])
-  const [barData, setBarData]       = useState(Array(7).fill(0))
-  const [loading, setLoading]       = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadStats() }, [])
-
-  const loadStats = async (silent = false) => {
-    if (!silent) setLoading(true); else setRefreshing(true)
-    try {
-      const [
-        { count: ordersCount   },
-        { count: customersCount },
-        { count: productsCount  },
-        { count: ticketsCount   },
-      ] = await Promise.all([
-        supabase.from('orders').select('*',           { count: 'exact', head: true }),
-        supabase.from('profiles').select('*',         { count: 'exact', head: true }),
-        supabase.from('products').select('*',         { count: 'exact', head: true }),
-        supabase.from('support_tickets').select('*',  { count: 'exact', head: true }).eq('status','open'),
+  useEffect(() => {
+    const load = async () => {
+      const [ordersRes, customersRes, pendingRes, recentRes, revenueRes] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact' }),
+        supabase.from('profiles').select('id', { count: 'exact' }),
+        supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('orders').select('id,customer_name,total,status,created_at').order('created_at', { ascending: false }).limit(8),
+        supabase.from('orders').select('total').eq('payment_status', 'paid'),
       ])
-
-      const { data: paidOrders } = await supabase
-        .from('orders').select('total,created_at').eq('payment_status','paid')
-      const revenue = paidOrders?.reduce((t,o) => t + (Number(o.total)||0), 0) || 0
-
-      // 7-day bar
-      const dayTotals = Array.from({length:7}, (_,i) => {
-        const d = new Date(); d.setDate(d.getDate()-(6-i))
-        const key = d.toISOString().slice(0,10)
-        return paidOrders?.filter(o=>o.created_at?.slice(0,10)===key).reduce((t,o)=>t+(Number(o.total)||0),0) || 0
+      const revenue = revenueRes.data?.reduce((s, o) => s + Number(o.total), 0) || 0
+      setStats({
+        orders: ordersRes.count || 0,
+        customers: customersRes.count || 0,
+        pending: pendingRes.count || 0,
+        revenue,
       })
-      const maxVal = Math.max(...dayTotals, 1)
-      setBarData(dayTotals.map(v => Math.round((v/maxVal)*100)))
+      setRecentOrders(recentRes.data || [])
+      setLoading(false)
+    }
+    load()
+  }, [])
 
-      const { data: fb } = await supabase.from('feedback').select('rating')
-      const avgRating = fb?.length ? (fb.reduce((t,f)=>t+(f.rating||0),0)/fb.length).toFixed(1) : '—'
+  // Simple bar chart data — last 7 days
+  const [chartData, setChartData] = useState([])
+  useEffect(() => {
+    const since = new Date(); since.setDate(since.getDate() - 6)
+    supabase.from('orders').select('total,created_at').gte('created_at', since.toISOString()).eq('payment_status', 'paid')
+      .then(({ data }) => {
+        const days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i))
+          return { label: d.toLocaleDateString('en', { weekday: 'short' }), total: 0 }
+        })
+        data?.forEach(o => {
+          const d = new Date(o.created_at).toLocaleDateString('en', { weekday: 'short' })
+          const slot = days.find(x => x.label === d)
+          if (slot) slot.total += Number(o.total)
+        })
+        setChartData(days)
+      })
+  }, [])
 
-      const { data: orders } = await supabase
-        .from('orders').select('id,customer_name,total,status,created_at')
-        .order('created_at',{ascending:false}).limit(5)
-
-      setStats({ revenue, orders: ordersCount||0, customers: customersCount||0, products: productsCount||0, tickets: ticketsCount||0, avgRating })
-      setRecentOrders(orders||[])
-    } catch(e){ console.warn('Dashboard:', e.message) }
-    finally { setLoading(false); setRefreshing(false) }
-  }
-
-  const statCards = [
-    { label:'Revenue',  value:`₦${Number(stats.revenue).toLocaleString()}`, icon:TrendingUp,   color:'text-green-400',  bg:'bg-green-400/10' },
-    { label:'Orders',   value:stats.orders,                                  icon:ShoppingCart, color:'text-blue-400',   bg:'bg-blue-400/10' },
-    { label:'Customers',value:stats.customers,                               icon:Users,        color:'text-purple-400', bg:'bg-purple-400/10' },
-    { label:'Products', value:stats.products,                                icon:Package,      color:'text-brand-orange',bg:'bg-brand-orange/10' },
-    { label:'Tickets',  value:stats.tickets,                                 icon:MessageSquare,color:'text-yellow-400', bg:'bg-yellow-400/10' },
-    { label:'Rating',   value:stats.avgRating,                               icon:Star,         color:'text-yellow-400', bg:'bg-yellow-400/10' },
-  ]
-
-  const weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const maxRevenue = Math.max(...chartData.map(d => d.total), 1)
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className={`font-display text-3xl md:text-4xl ${isDark?'text-white':'text-gray-900'}`}>DASHBOARD</h1>
-          <p className={`text-xs mt-1 ${isDark?'text-gray-500':'text-gray-400'}`}>Live store overview</p>
-        </div>
-        <button onClick={()=>loadStats(true)} disabled={refreshing}
-          className={`p-2.5 rounded-xl border transition-all btn-press ${isDark?'border-[#242424] text-gray-400 hover:text-white':'border-gray-200 text-gray-500 hover:text-gray-900'}`}>
-          <RefreshCw size={14} className={refreshing?'animate-spin text-brand-orange':''} />
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-white text-2xl font-bold">Dashboard</h1>
+        <p className="text-gray-500 text-sm mt-1">Welcome back, Admin 👋</p>
       </div>
 
-      {/* Stats grid — 2 cols mobile, 3 tablet, 6 desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        {statCards.map((s,i) => (
-          <motion.div key={s.label}
-            initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay:i*0.06}}
-            className={`p-4 rounded-2xl border ${isDark?'bg-[#141414] border-[#242424]':'bg-white border-gray-200'}`}>
-            <div className={`w-8 h-8 ${s.bg} rounded-xl flex items-center justify-center mb-2.5`}>
-              <s.icon size={14} className={s.color} />
-            </div>
-            <p className={`text-xl font-bold leading-none ${isDark?'text-white':'text-gray-900'}`}>{loading?'—':s.value}</p>
-            <p className={`text-[11px] mt-1 ${isDark?'text-gray-500':'text-gray-400'}`}>{s.label}</p>
-          </motion.div>
-        ))}
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={TrendingUp}  label="Total Revenue"   value={`₦${((stats?.revenue||0)/1000).toFixed(0)}K`} sub="Paid orders" color="orange" loading={loading}/>
+        <StatCard icon={ShoppingBag} label="Total Orders"    value={stats?.orders||0}   sub={`${stats?.pending||0} pending`} color="blue"   loading={loading}/>
+        <StatCard icon={Users}       label="Customers"       value={stats?.customers||0} color="green" loading={loading}/>
+        <StatCard icon={Clock}       label="Pending Orders"  value={stats?.pending||0} color={stats?.pending > 0 ? 'orange' : 'green'} loading={loading}/>
       </div>
 
-      {/* Charts row — stacked on mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Revenue bar chart */}
-        <div className={`lg:col-span-2 p-5 rounded-2xl border ${isDark?'bg-[#141414] border-[#242424]':'bg-white border-gray-200'}`}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className={`font-bold text-sm ${isDark?'text-white':'text-gray-900'}`}>Revenue – Last 7 Days</h3>
-              <p className={`text-xs ${isDark?'text-gray-500':'text-gray-400'}`}>Paid orders only</p>
-            </div>
-            <span className="text-brand-orange font-bold text-sm">₦{Number(stats.revenue).toLocaleString()}</span>
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Revenue chart */}
+        <div className="lg:col-span-2 bg-[#141414] rounded-2xl border border-[#2A2A2A] p-6">
+          <h2 className="text-white font-semibold mb-6">Revenue (Last 7 Days)</h2>
+          <div className="flex items-end gap-3 h-40">
+            {chartData.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                <div className="w-full bg-[#1A1A1A] rounded-t-lg overflow-hidden" style={{ height: '120px' }}>
+                  <motion.div initial={{ height: 0 }} animate={{ height: `${(d.total / maxRevenue) * 100}%` }}
+                    transition={{ duration: 0.8, delay: i * 0.08 }}
+                    className="w-full bg-gradient-to-t from-brand-orange to-orange-400 rounded-t-lg mt-auto"
+                    style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end' }}/>
+                </div>
+                <span className="text-[10px] text-gray-500">{d.label}</span>
+              </div>
+            ))}
           </div>
-          {loading ? (
-            <div className="h-24 skeleton rounded-xl" />
-          ) : (
-            <>
-              <div className="flex items-end gap-1.5 h-24">
-                {barData.map((h,i) => (
-                  <motion.div key={i}
-                    initial={{height:0}} animate={{height:`${Math.max(h,2)}%`}}
-                    transition={{delay:i*0.07,duration:0.6,ease:'easeOut'}}
-                    className={`flex-1 rounded-t-lg ${i===5?'bg-brand-orange':isDark?'bg-[#2a2a2a]':'bg-gray-100'}`}
-                    style={{minHeight:'3px'}}
-                  />
-                ))}
-              </div>
-              <div className="flex justify-between mt-1.5">
-                {weekDays.map(d=>(
-                  <span key={d} className={`text-[9px] flex-1 text-center ${isDark?'text-gray-600':'text-gray-400'}`}>{d}</span>
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
-        {/* Order status */}
-        <div className={`p-5 rounded-2xl border ${isDark?'bg-[#141414] border-[#242424]':'bg-white border-gray-200'}`}>
-          <h3 className={`font-bold text-sm mb-4 ${isDark?'text-white':'text-gray-900'}`}>Order Status</h3>
-          {['delivered','processing','shipped','pending','cancelled'].map((s,i) => {
-            const count = recentOrders.filter(o=>o.status===s).length
-            const pct   = recentOrders.length ? Math.round((count/Math.max(recentOrders.length,1))*100) : 0
-            const clr   = {delivered:'bg-green-400',processing:'bg-blue-400',shipped:'bg-brand-orange',pending:'bg-yellow-400',cancelled:'bg-red-400'}
-            return (
-              <div key={s} className="mb-3 last:mb-0">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className={`capitalize ${isDark?'text-gray-400':'text-gray-600'}`}>{s}</span>
-                  <span className={`font-semibold ${isDark?'text-white':'text-gray-900'}`}>{count}</span>
-                </div>
-                <div className={`h-1.5 rounded-full ${isDark?'bg-[#242424]':'bg-gray-100'}`}>
-                  <motion.div initial={{width:0}} animate={{width:`${pct}%`}}
-                    transition={{duration:0.7,delay:i*0.1}}
-                    className={`h-full rounded-full ${clr[s]}`}
-                  />
-                </div>
-              </div>
-            )
-          })}
+        {/* Quick links */}
+        <div className="bg-[#141414] rounded-2xl border border-[#2A2A2A] p-6">
+          <h2 className="text-white font-semibold mb-4">Quick Actions</h2>
+          <div className="space-y-2">
+            {[
+              { to: '/admin/products', label: 'Add Product',  icon: '➕' },
+              { to: '/admin/orders',   label: 'View Orders',  icon: '📦' },
+              { to: '/admin/tickets',  label: 'Support Tickets', icon: '🎫' },
+              { to: '/admin/blog',     label: 'Write Blog Post', icon: '✍️' },
+              { to: '/admin/hero',     label: 'Update Hero',  icon: '🖼️' },
+              { to: '/admin/delivery', label: 'Set Delivery Prices', icon: '🚚' },
+            ].map(q => (
+              <Link key={q.to} to={q.to}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1A1A1A] hover:bg-brand-orange/10 hover:text-brand-orange text-gray-300 text-sm transition-all group">
+                <span>{q.icon}</span> {q.label}
+                <span className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Recent orders — card layout on mobile, table on desktop */}
-      <div className={`rounded-2xl border overflow-hidden ${isDark?'bg-[#141414] border-[#242424]':'bg-white border-gray-200'}`}>
-        <div className={`flex items-center justify-between p-4 border-b ${isDark?'border-[#242424]':'border-gray-100'}`}>
-          <h3 className={`font-bold text-sm ${isDark?'text-white':'text-gray-900'}`}>Recent Orders</h3>
-          <a href="/admin/orders" className="text-brand-orange text-xs hover:underline flex items-center gap-1">
-            View all <ArrowUpRight size={11}/>
-          </a>
+      {/* Recent orders */}
+      <div className="bg-[#141414] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
+          <h2 className="text-white font-semibold">Recent Orders</h2>
+          <Link to="/admin/orders" className="text-xs text-brand-orange hover:underline">View all →</Link>
         </div>
-
-        {loading ? (
-          <div className="p-4 space-y-2">{[1,2,3].map(i=><div key={i} className="h-14 skeleton rounded-xl"/>)}</div>
-        ) : recentOrders.length === 0 ? (
-          <div className="py-14 text-center">
-            <ShoppingCart size={28} className={`mx-auto mb-2 ${isDark?'text-gray-700':'text-gray-300'}`}/>
-            <p className={`text-sm ${isDark?'text-gray-500':'text-gray-400'}`}>No orders yet</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile: cards */}
-            <div className="md:hidden divide-y divide-[#242424]">
-              {recentOrders.map(order => (
-                <div key={order.id} className={`p-4 ${isDark?'':'divide-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono text-xs text-brand-orange font-bold">#{order.id?.slice(0,8).toUpperCase()}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium capitalize ${STATUS_BADGE[order.status]||'badge-info'}`}>{order.status}</span>
-                  </div>
-                  <p className={`text-sm font-medium ${isDark?'text-gray-300':'text-gray-700'}`}>{order.customer_name}</p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-xs ${isDark?'text-gray-500':'text-gray-400'}`}>{new Date(order.created_at).toLocaleDateString('en-NG',{day:'numeric',month:'short'})}</span>
-                    <span className="text-brand-orange font-bold text-sm">₦{Number(order.total||0).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop: table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className={`text-xs uppercase tracking-wider border-b ${isDark?'bg-black/20 text-gray-500 border-[#242424]':'bg-gray-50 text-gray-400 border-gray-100'}`}>
-                    <th className="px-5 py-3 text-left">Order</th>
-                    <th className="px-5 py-3 text-left">Customer</th>
-                    <th className="px-5 py-3 text-right">Total</th>
-                    <th className="px-5 py-3 text-center">Status</th>
-                    <th className="px-5 py-3 text-right">Date</th>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#1A1A1A]">
+                {['Order ID','Customer','Amount','Status','Date'].map(h => (
+                  <th key={h} className="text-left px-6 py-3 text-xs text-gray-500 font-semibold uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                [1,2,3].map(i => (
+                  <tr key={i} className="border-b border-[#1A1A1A]">
+                    {[1,2,3,4,5].map(j => <td key={j} className="px-6 py-4"><div className="h-4 bg-[#2A2A2A] rounded animate-pulse"/></td>)}
                   </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map(order => (
-                    <tr key={order.id} className={`border-t ${isDark?'border-[#242424] hover:bg-white/[0.02]':'border-gray-50 hover:bg-gray-50'}`}>
-                      <td className="px-5 py-3 font-mono text-xs text-brand-orange font-bold">#{order.id?.slice(0,8).toUpperCase()}</td>
-                      <td className={`px-5 py-3 text-sm ${isDark?'text-gray-300':'text-gray-700'}`}>{order.customer_name}</td>
-                      <td className={`px-5 py-3 text-right font-bold ${isDark?'text-white':'text-gray-900'}`}>₦{Number(order.total||0).toLocaleString()}</td>
-                      <td className="px-5 py-3 text-center">
-                        <span className={`text-[10px] px-2 py-1 rounded-full font-medium capitalize ${STATUS_BADGE[order.status]||'badge-info'}`}>{order.status}</span>
-                      </td>
-                      <td className={`px-5 py-3 text-right text-xs ${isDark?'text-gray-500':'text-gray-400'}`}>
-                        {new Date(order.created_at).toLocaleDateString('en-NG',{day:'numeric',month:'short'})}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+                ))
+              ) : recentOrders.length === 0 ? (
+                <tr><td colSpan={5} className="text-center text-gray-500 py-12">No orders yet</td></tr>
+              ) : recentOrders.map(o => (
+                <tr key={o.id} className="border-b border-[#1A1A1A] hover:bg-white/2 transition-colors">
+                  <td className="px-6 py-4 text-brand-orange text-sm font-mono">#{o.id.slice(0,8).toUpperCase()}</td>
+                  <td className="px-6 py-4 text-white text-sm">{o.customer_name}</td>
+                  <td className="px-6 py-4 text-white text-sm font-semibold">₦{Number(o.total).toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold capitalize ${STATUS_COLOR[o.status] || 'text-gray-400 bg-gray-400/10'}`}>
+                      {o.status?.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-400 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

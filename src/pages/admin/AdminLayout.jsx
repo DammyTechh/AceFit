@@ -2,266 +2,179 @@ import React, { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  LayoutDashboard, Package, ShoppingCart, MessageSquare,
-  Users, Star, Settings, Menu, X, LogOut, Sun, Moon,
-  ChevronRight, Shield, AlertCircle, Eye, EyeOff
+  LayoutDashboard, Package, ShoppingBag, MessageSquare, Users,
+  Star, Settings, BookOpen, Truck, CreditCard, Image, Menu, X,
+  LogOut, ChevronRight, Bell, Pill
 } from 'lucide-react'
-import { useStore } from '../../lib/store'
-import toast from 'react-hot-toast'
+import { supabase } from '../../lib/supabase'
 
-const NAV_ITEMS = [
-  { path: '/admin',           icon: LayoutDashboard, label: 'Dashboard',        end: true },
-  { path: '/admin/products',  icon: Package,         label: 'Products' },
-  { path: '/admin/orders',    icon: ShoppingCart,    label: 'Orders' },
-  { path: '/admin/tickets',   icon: MessageSquare,   label: 'Tickets' },
-  { path: '/admin/customers', icon: Users,           label: 'Customers' },
-  { path: '/admin/feedback',  icon: Star,            label: 'Feedback' },
-  { path: '/admin/settings',  icon: Settings,        label: 'Settings' },
+const NAV = [
+  { to: '/admin',           label: 'Dashboard',    icon: LayoutDashboard, end: true },
+  { to: '/admin/products',  label: 'Products',     icon: Package },
+  { to: '/admin/orders',    label: 'Orders',       icon: ShoppingBag },
+  { to: '/admin/payments',  label: 'Payments',     icon: CreditCard },
+  { to: '/admin/customers', label: 'Customers',    icon: Users },
+  { to: '/admin/tickets',   label: 'Support',      icon: MessageSquare },
+  { to: '/admin/feedback',  label: 'Reviews',      icon: Star },
+  { to: '/admin/blog',      label: 'Blog',         icon: BookOpen },
+  { to: '/admin/hero',      label: 'Hero Slides',  icon: Image },
+  { to: '/admin/delivery',  label: 'Delivery Zones', icon: Truck },
+  { to: '/admin/settings',  label: 'Settings',     icon: Settings },
 ]
 
-const ADMIN_EMAIL    = 'Admin@acefit.com'
-const ADMIN_PASSWORD = 'Acefit@2026!'
+const ADMIN_EMAIL    = import.meta.env.VITE_ADMIN_EMAIL    || 'admin@acefit.com'
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'AceFit@2026!'
 
 export default function AdminLayout() {
-  const { theme, toggleTheme } = useStore()
-  const [authenticated, setAuthenticated] = useState(false)
-  const [loginEmail,    setLoginEmail]    = useState('')
-  const [loginPass,     setLoginPass]     = useState('')
-  const [showPass,      setShowPass]      = useState(false)
-  const [authLoading,   setAuthLoading]   = useState(false)
-  const [authError,     setAuthError]     = useState('')
-  const [sidebarOpen,   setSidebarOpen]   = useState(true)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const isDark = theme === 'dark'
+  const [authed, setAuthed] = useState(false)
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
+  const [loginError, setLoginError] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [badgeCounts, setBadgeCounts] = useState({ orders: 0, tickets: 0 })
+  const navigate = useNavigate()
   const location = useLocation()
 
-  // Close mobile sidebar on route change
-  useEffect(() => { setMobileSidebarOpen(false) }, [location.pathname])
-
   useEffect(() => {
-    if (sessionStorage.getItem('acefit_admin_v2') === 'true') setAuthenticated(true)
+    const ok = sessionStorage.getItem('acefit_admin') === 'true'
+    setAuthed(ok)
   }, [])
 
-  const handleLogin = (e) => {
+  useEffect(() => {
+    if (!authed) return
+    // Load badge counts
+    Promise.all([
+      supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
+      supabase.from('support_tickets').select('id', { count: 'exact' }).eq('status', 'open'),
+    ]).then(([{ count: orders }, { count: tickets }]) => {
+      setBadgeCounts({ orders: orders || 0, tickets: tickets || 0 })
+    })
+  }, [authed, location.pathname])
+
+  const handleLogin = async (e) => {
     e.preventDefault()
-    setAuthError('')
-    setAuthLoading(true)
-    setTimeout(() => {
-      if (
-        loginEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
-        loginPass === ADMIN_PASSWORD
-      ) {
-        sessionStorage.setItem('acefit_admin_v2', 'true')
-        setAuthenticated(true)
-        toast.success('Welcome, Admin! 🔥')
+    setLoginError('')
+    // Check against env vars first, then DB
+    const emailMatch    = loginForm.email === ADMIN_EMAIL
+    const passwordMatch = loginForm.password === ADMIN_PASSWORD
+    if (emailMatch && passwordMatch) {
+      sessionStorage.setItem('acefit_admin', 'true')
+      setAuthed(true)
+      return
+    }
+    // Try DB verification
+    try {
+      const { data, error } = await supabase.rpc('verify_admin', {
+        p_email: loginForm.email, p_password: loginForm.password
+      })
+      if (!error && data === true) {
+        sessionStorage.setItem('acefit_admin', 'true')
+        setAuthed(true)
       } else {
-        setAuthError('Incorrect email or password.')
+        setLoginError('Invalid email or password')
       }
-      setAuthLoading(false)
-    }, 500)
+    } catch {
+      setLoginError('Invalid email or password')
+    }
   }
 
   const handleLogout = () => {
-    sessionStorage.removeItem('acefit_admin_v2')
-    setAuthenticated(false)
-    setLoginEmail('')
-    setLoginPass('')
-    toast.success('Logged out')
+    sessionStorage.removeItem('acefit_admin')
+    setAuthed(false)
+    navigate('/admin')
   }
 
-  // ── Login screen ────────────────────────────────────────
-  if (!authenticated) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center p-4 ${isDark ? 'bg-brand-black' : 'bg-gray-50'}`}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className={`w-full max-w-sm rounded-2xl overflow-hidden border ${isDark ? 'bg-[#141414] border-[#242424]' : 'bg-white border-gray-200 shadow-xl'}`}
-        >
-          <div className="h-1 bg-gradient-to-r from-brand-orange via-orange-400 to-yellow-400" />
-          <div className="p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-brand-orange/10 rounded-xl flex items-center justify-center">
-                <Shield size={20} className="text-brand-orange" />
-              </div>
-              <div>
-                <img src="https://i.imgur.com/eDF88SE.png" alt="AceFit" className="h-7 w-auto mb-0.5" />
-                <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Admin Panel</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Email</label>
-                <input type="email" value={loginEmail}
-                  onChange={e => { setLoginEmail(e.target.value); setAuthError('') }}
-                  required autoFocus placeholder="Admin@acefit.com"
-                  className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors ${isDark ? 'bg-black/40 border-[#2a2a2a] text-white placeholder-gray-600 focus:border-brand-orange' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-brand-orange'}`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Password</label>
-                <div className="relative">
-                  <input type={showPass ? 'text' : 'password'} value={loginPass}
-                    onChange={e => { setLoginPass(e.target.value); setAuthError('') }}
-                    required placeholder="••••••••••"
-                    className={`w-full px-4 py-3 pr-11 rounded-xl border text-sm outline-none transition-colors ${isDark ? 'bg-black/40 border-[#2a2a2a] text-white placeholder-gray-600 focus:border-brand-orange' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-brand-orange'}`}
-                  />
-                  <button type="button" onClick={() => setShowPass(s => !s)}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}>
-                    {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
-
-              {authError && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-400/10 border border-red-400/20">
-                  <AlertCircle size={13} className="text-red-400 shrink-0" />
-                  <p className="text-red-400 text-xs">{authError}</p>
-                </div>
-              )}
-
-              <button type="submit" disabled={authLoading}
-                className="w-full py-3.5 bg-brand-orange hover:bg-brand-orange-light text-white font-bold rounded-xl transition-all btn-press shadow-lg shadow-brand-orange/25 disabled:opacity-60">
-                {authLoading ? 'Signing in…' : 'Access Admin Panel'}
-              </button>
-            </form>
-
-            <div className={`mt-5 p-3 rounded-xl border text-xs ${isDark ? 'border-[#242424] bg-black/20' : 'border-gray-100 bg-gray-50'}`}>
-              <p className={`font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Credentials</p>
-              <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>📧 Admin@acefit.com</p>
-              <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>🔑 Acefit@2026!</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    )
-  }
-
-  // ── Sidebar content (shared desktop + mobile) ──────────
-  const SidebarContent = () => (
-    <>
-      <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-[#1e1e1e]' : 'border-gray-100'}`}>
-        <div>
-          <img src="https://i.imgur.com/eDF88SE.png" alt="AceFit" className="h-7 w-auto" />
-          <p className={`text-[10px] mt-0.5 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Management Panel</p>
+  if (!authed) return (
+    <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm bg-[#141414] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-brand-orange to-orange-400"/>
+        <div className="p-8">
+          <img src="https://i.imgur.com/eDF88SE.png" alt="AceFit" className="h-12 mb-8"/>
+          <h1 className="text-white font-bold text-xl mb-1">Admin Panel</h1>
+          <p className="text-gray-500 text-sm mb-8">Sign in to manage AceFit</p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input type="email" required placeholder="Admin email" value={loginForm.email}
+              onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))}
+              className="w-full px-4 py-3 bg-black/40 border border-[#2A2A2A] rounded-xl text-white text-sm outline-none focus:border-brand-orange placeholder-gray-600"/>
+            <input type="password" required placeholder="Password" value={loginForm.password}
+              onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))}
+              className="w-full px-4 py-3 bg-black/40 border border-[#2A2A2A] rounded-xl text-white text-sm outline-none focus:border-brand-orange placeholder-gray-600"/>
+            {loginError && <p className="text-red-400 text-xs">{loginError}</p>}
+            <button type="submit" className="w-full py-3 bg-brand-orange text-white font-bold rounded-xl hover:bg-orange-500 transition-all">
+              Sign In
+            </button>
+          </form>
         </div>
-        {/* Close button — mobile only */}
-        <button onClick={() => setMobileSidebarOpen(false)}
-          className={`lg:hidden p-1.5 rounded-lg ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
-          <X size={18} />
-        </button>
-      </div>
-
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(item => (
-          <NavLink key={item.path} to={item.path} end={item.end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
-                isActive
-                  ? 'bg-brand-orange/12 text-brand-orange'
-                  : isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`
-            }>
-            <item.icon size={16} className="shrink-0" />
-            <span>{item.label}</span>
-            <ChevronRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className={`p-3 border-t ${isDark ? 'border-[#1e1e1e]' : 'border-gray-100'}`}>
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl mb-1 ${isDark ? 'bg-white/5' : 'bg-gray-50'}`}>
-          <div className="w-7 h-7 bg-brand-orange rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">A</div>
-          <div className="min-w-0">
-            <p className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>AceFit Admin</p>
-            <p className={`text-[10px] truncate ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Admin@acefit.com</p>
-          </div>
-        </div>
-        <button onClick={handleLogout}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${isDark ? 'text-gray-600 hover:text-red-400 hover:bg-red-400/8' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}>
-          <LogOut size={14} /> Sign Out
-        </button>
-      </div>
-    </>
+      </motion.div>
+    </div>
   )
 
-  // ── Admin shell ─────────────────────────────────────────
   return (
-    <div className={`flex min-h-screen ${isDark ? 'bg-brand-black' : 'bg-gray-50'}`}>
-
-      {/* ── Desktop sidebar ── */}
+    <div className="min-h-screen bg-[#0A0A0A] flex">
+      {/* Mobile overlay */}
       <AnimatePresence>
         {sidebarOpen && (
-          <motion.aside
-            initial={{ x: -240 }} animate={{ x: 0 }} exit={{ x: -240 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-            className={`hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-56 z-40 border-r ${isDark ? 'bg-[#0D0D0D] border-[#1e1e1e]' : 'bg-white border-gray-200'}`}
-          >
-            <SidebarContent />
-          </motion.aside>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)}/>
         )}
       </AnimatePresence>
 
-      {/* ── Mobile sidebar overlay ── */}
-      <AnimatePresence>
-        {mobileSidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-              onClick={() => setMobileSidebarOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: -240 }} animate={{ x: 0 }} exit={{ x: -240 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-              className={`fixed left-0 top-0 bottom-0 w-56 z-50 flex flex-col border-r lg:hidden ${isDark ? 'bg-[#0D0D0D] border-[#1e1e1e]' : 'bg-white border-gray-200'}`}
-            >
-              <SidebarContent />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-60 bg-[#0F0F0F] border-r border-[#1A1A1A] flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-5 border-b border-[#1A1A1A] flex items-center justify-between">
+          <img src="https://i.imgur.com/eDF88SE.png" alt="AceFit" className="h-9"/>
+          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(false)}><X size={18}/></button>
+        </div>
 
-      {/* ── Main content ── */}
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${sidebarOpen ? 'lg:ml-56' : ''}`}>
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {NAV.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium mb-0.5 transition-all group ${
+                  isActive ? 'bg-brand-orange/15 text-brand-orange' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+              <Icon size={16} className="shrink-0"/>
+              <span className="flex-1">{label}</span>
+              {label === 'Orders' && badgeCounts.orders > 0 && (
+                <span className="px-1.5 py-0.5 bg-brand-orange text-white text-[10px] font-bold rounded-full">{badgeCounts.orders}</span>
+              )}
+              {label === 'Support' && badgeCounts.tickets > 0 && (
+                <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">{badgeCounts.tickets}</span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
 
+        <div className="p-4 border-t border-[#1A1A1A]">
+          <button onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-red-400 hover:bg-red-400/10 rounded-xl transition-all">
+            <LogOut size={15}/> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className={`sticky top-0 z-30 flex items-center justify-between px-4 border-b glass ${isDark ? 'bg-brand-black/95 border-[#1e1e1e]' : 'bg-white/95 border-gray-200'}`}
-          style={{ height: '52px' }}>
-
-          {/* Left: hamburger */}
-          <div className="flex items-center gap-3">
-            {/* Mobile hamburger */}
-            <button onClick={() => setMobileSidebarOpen(true)}
-              className={`lg:hidden p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
-              <Menu size={18} />
-            </button>
-            {/* Desktop sidebar toggle */}
-            <button onClick={() => setSidebarOpen(s => !s)}
-              className={`hidden lg:flex p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
-              <Menu size={18} />
-            </button>
-
-            {/* Mobile: current page label */}
-            <span className={`lg:hidden text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {NAV_ITEMS.find(n => n.end ? location.pathname === n.path : location.pathname.startsWith(n.path))?.label || 'Admin'}
-            </span>
+        <header className="bg-[#0F0F0F] border-b border-[#1A1A1A] px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <button className="lg:hidden text-gray-400 hover:text-white" onClick={() => setSidebarOpen(true)}>
+            <Menu size={20}/>
+          </button>
+          <div className="hidden lg:block">
+            <nav className="flex items-center gap-2 text-xs text-gray-500">
+              <span>Admin</span>
+              <ChevronRight size={10}/>
+              <span className="text-white capitalize">{location.pathname.split('/').pop() || 'Dashboard'}</span>
+            </nav>
           </div>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-1.5">
-            <button onClick={toggleTheme}
-              className={`p-2 rounded-lg transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
-              {isDark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <div className="w-7 h-7 bg-brand-orange rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>
+          <div className="flex items-center gap-3 ml-auto">
+            <a href="/" target="_blank" className="text-xs text-gray-500 hover:text-brand-orange transition-colors">View Store ↗</a>
+            <div className="w-8 h-8 bg-brand-orange rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 md:p-5 overflow-y-auto">
-          <Outlet />
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet/>
         </main>
       </div>
     </div>

@@ -15,19 +15,22 @@ export const useStore = create(
 
       // Cart
       cart: [],
-      addToCart: (product, size, qty = 1) => {
+      addToCart: (product, size, qty = 1, color = '') => {
         const cart = get().cart
-        const existing = cart.find(i => i.id === product.id && i.size === size)
+        const key = `${product.id}-${size}-${color}`
+        const existing = cart.find(i => `${i.id}-${i.size}-${i.color}` === key)
         if (existing) {
-          set({ cart: cart.map(i => i.id === product.id && i.size === size ? { ...i, qty: i.qty + qty } : i) })
+          set({ cart: cart.map(i => `${i.id}-${i.size}-${i.color}` === key ? { ...i, qty: i.qty + qty } : i) })
         } else {
-          set({ cart: [...cart, { ...product, size, qty }] })
+          set({ cart: [...cart, { ...product, size, qty, color }] })
         }
       },
-      removeFromCart: (id, size) => set(s => ({ cart: s.cart.filter(i => !(i.id === id && i.size === size)) })),
-      updateQty: (id, size, qty) => set(s => ({
-        cart: s.cart.map(i => i.id === id && i.size === size ? { ...i, qty } : i)
-      })),
+      removeFromCart: (id, size, color = '') =>
+        set(s => ({ cart: s.cart.filter(i => !(i.id === id && i.size === size && i.color === color)) })),
+      updateQty: (id, size, qty, color = '') =>
+        set(s => ({
+          cart: s.cart.map(i => i.id === id && i.size === size && i.color === color ? { ...i, qty } : i)
+        })),
       clearCart: () => set({ cart: [] }),
       cartTotal: () => get().cart.reduce((t, i) => t + i.price * i.qty, 0),
       cartCount: () => get().cart.reduce((t, i) => t + i.qty, 0),
@@ -48,6 +51,8 @@ export const useStore = create(
       setAuthModalOpen: (v) => set({ authModalOpen: v }),
       supportOpen: false,
       setSupportOpen: (v) => set({ supportOpen: v }),
+      checkoutOpen: false,
+      setCheckoutOpen: (v) => set({ checkoutOpen: v }),
 
       // Search
       searchQuery: '',
@@ -56,21 +61,23 @@ export const useStore = create(
       // Filters
       activeCategory: 'all',
       setActiveCategory: (c) => set({ activeCategory: c }),
+      activeCollection: 'all',
+      setActiveCollection: (c) => set({ activeCollection: c }),
       activeGender: 'all',
       setActiveGender: (g) => set({ activeGender: g }),
-      priceRange: [0, 100000],
+      priceRange: [0, 200000],
       setPriceRange: (r) => set({ priceRange: r }),
       sortBy: 'newest',
       setSortBy: (s) => set({ sortBy: s }),
 
-      // Location consent
+      // Consent
       locationConsent: false,
       setLocationConsent: (v) => set({ locationConsent: v }),
       termsAccepted: false,
       setTermsAccepted: (v) => set({ termsAccepted: v }),
     }),
     {
-      name: 'acefit-store',
+      name: 'acefit-store-v2',
       partialize: (state) => ({
         theme: state.theme,
         cart: state.cart,

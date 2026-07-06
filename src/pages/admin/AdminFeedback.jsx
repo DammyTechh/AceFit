@@ -1,81 +1,60 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Star, Search } from 'lucide-react'
+import { Star, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useStore } from '../../lib/store'
-
+import toast from 'react-hot-toast'
 
 export default function AdminFeedback() {
-  const { theme } = useStore()
-  const [feedback, setFeedback] = useState([])
-  const [search, setSearch] = useState('')
-  const [ratingFilter, setRatingFilter] = useState(0)
-  const isDark = theme === 'dark'
+  const [reviews, setReviews] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await supabase.from('feedback').select('*').order('created_at', { ascending: false })
-        if (data?.length) setFeedback(data)
-      } catch {}
-    }
+  const load = () => {
+    setLoading(true)
+    supabase.from('feedback').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { setReviews(data || []); setLoading(false) })
+  }
+  useEffect(load, [])
+
+  const togglePublish = async (r) => {
+    await supabase.from('feedback').update({ is_published: !r.is_published }).eq('id', r.id)
     load()
-  }, [])
-
-  const avgRating = (feedback.reduce((t, f) => t + (f.rating || 0), 0) / feedback.length).toFixed(1)
-  const filtered = feedback.filter(f => {
-    const matchSearch = !search || f.name?.toLowerCase().includes(search.toLowerCase()) || f.message?.toLowerCase().includes(search.toLowerCase())
-    const matchRating = !ratingFilter || f.rating === ratingFilter
-    return matchSearch && matchRating
-  })
+  }
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this review?')) return
+    await supabase.from('feedback').delete().eq('id', id)
+    toast.success('Deleted')
+    load()
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className={`font-display text-3xl md:text-4xl ${isDark ? 'text-white' : 'text-gray-900'}`}>FEEDBACK</h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{feedback.length} reviews · Avg: {avgRating} ⭐</p>
+        <h1 className="text-white text-2xl font-bold">Reviews & Feedback</h1>
+        <p className="text-gray-500 text-sm mt-1">{reviews.length} reviews</p>
       </div>
-
-      {/* Rating summary */}
-      <div className="grid grid-cols-5 gap-3">
-        {[5,4,3,2,1].map(r => {
-          const count = feedback.filter(f => f.rating === r).length
-          const pct = Math.round((count / feedback.length) * 100) || 0
-          return (
-            <button key={r} onClick={() => setRatingFilter(ratingFilter === r ? 0 : r)}
-              className={`p-3 rounded-2xl border text-center transition-all btn-press ${ratingFilter === r ? 'border-brand-orange bg-brand-orange/10' : isDark ? 'bg-brand-dark-card border-brand-dark-border hover:border-brand-orange/40' : 'bg-white border-gray-200 hover:border-brand-orange/40'}`}>
-              <div className="flex justify-center mb-1">{'⭐'.repeat(r)}</div>
-              <p className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{count}</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{pct}%</p>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border max-w-md ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
-        <Search size={15} className="text-brand-orange" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search feedback..." className={`flex-1 bg-transparent text-sm outline-none ${isDark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((item, i) => (
-          <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-            className={`p-5 rounded-2xl border ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-brand-orange rounded-full flex items-center justify-center text-white text-sm font-bold">{item.name?.charAt(0)}</div>
-                <div>
-                  <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.name}</p>
-                  <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{item.email}</p>
-                </div>
-              </div>
-              <div className="flex gap-0.5">
-                {[1,2,3,4,5].map(s => <Star key={s} size={12} className={s <= item.rating ? 'text-yellow-400 fill-yellow-400' : isDark ? 'text-gray-700' : 'text-gray-200'} />)}
-              </div>
+      <div className="grid gap-4">
+        {loading ? [1,2].map(i => <div key={i} className="h-24 bg-[#141414] rounded-2xl animate-pulse"/>) :
+        reviews.length === 0 ? <div className="text-center py-20 bg-[#141414] rounded-2xl border border-[#2A2A2A]"><Star size={32} className="text-gray-600 mx-auto mb-3"/><p className="text-gray-500">No reviews yet</p></div> :
+        reviews.map(r => (
+          <div key={r.id} className={`bg-[#141414] rounded-2xl border p-5 flex items-start gap-4 ${r.is_published ? 'border-[#2A2A2A]' : 'border-red-400/20 opacity-60'}`}>
+            <div className="w-10 h-10 bg-brand-orange/10 rounded-full flex items-center justify-center text-brand-orange font-bold shrink-0">
+              {(r.name || 'A').charAt(0).toUpperCase()}
             </div>
-            <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>"{item.message}"</p>
-            <p className={`text-xs mt-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>{new Date(item.created_at).toLocaleDateString()}</p>
-          </motion.div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-1">
+                <p className="text-white text-sm font-semibold">{r.name}</p>
+                <div className="flex">{Array.from({ length: 5 }).map((_,i) => <Star key={i} size={12} className={i < r.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}/>)}</div>
+                <span className="text-gray-500 text-xs">{new Date(r.created_at).toLocaleDateString()}</span>
+              </div>
+              <p className="text-gray-300 text-sm">{r.message}</p>
+              <p className="text-gray-500 text-xs mt-1">{r.email}</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => togglePublish(r)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${r.is_published ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25' : 'bg-gray-400/10 text-gray-400 hover:bg-gray-400/20'}`}>
+                {r.is_published ? 'Published' : 'Hidden'}
+              </button>
+              <button onClick={() => handleDelete(r.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"><Trash2 size={14}/></button>
+            </div>
+          </div>
         ))}
       </div>
     </div>

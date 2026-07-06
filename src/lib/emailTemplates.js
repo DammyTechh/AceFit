@@ -1,508 +1,319 @@
-// src/lib/emailTemplates.js
-// ─────────────────────────────────────────────────────────────
-// All AceFit transactional emails.
-// Every template returns { subject, html } — pass to send-email edge function.
-// ─────────────────────────────────────────────────────────────
+// src/lib/emailTemplates.js — All AceFit transactional emails
 
 const BRAND = {
-  orange: '#FF6B00',
+  orange:      '#FF6B00',
   orangeLight: '#FF8C3A',
-  black: '#0A0A0A',
-  darkCard: '#141414',
-  darkBorder: '#242424',
-  gray: '#888888',
-  lightGray: '#cccccc',
-  green: '#22c55e',
-  red: '#ef4444',
-  blue: '#3b82f6',
-  yellow: '#eab308',
-  logo: 'https://i.imgur.com/eDF88SE.png',
-  phone1: '07025692097',
-  phone2: '09153040271',
-  email: 'Acefitandgainz@gmail.com',
-  whatsapp: 'https://wa.me/2347025692097',
-  instagram: 'https://instagram.com/The_acefit',
-  siteUrl: 'https://acefit.com', // update after deploy
+  black:       '#0A0A0A',
+  darkCard:    '#141414',
+  darkBorder:  '#242424',
+  gray:        '#888888',
+  green:       '#22c55e',
+  red:         '#ef4444',
+  blue:        '#3b82f6',
+  logo:        'https://i.imgur.com/eDF88SE.png',
+  phone1:      '07025692097',
+  phone2:      '09153040271',
+  email:       'acefitandgainz@gmail.com',
+  whatsapp:    'https://wa.me/2347025692097',
+  instagram:   'https://instagram.com/acefit.shop',
+  tiktok:      'https://tiktok.com/@the_acefit',
+  snapchat:    'https://snapchat.com/add/acefit_official',
+  siteUrl:     import.meta.env.VITE_APP_URL || 'https://acefit.netlify.app',
 }
 
-// ─── Shared wrapper ───────────────────────────────────────────
 const wrap = (body, preheader = '') => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta name="x-apple-disable-message-reformatting"/>
   <title>AceFit</title>
-  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <style>
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
     body{margin:0;padding:0;background:${BRAND.black};font-family:'DM Sans',Helvetica,Arial,sans-serif}
-    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic}
+    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none}
     a{color:${BRAND.orange}}
     @media only screen and (max-width:600px){
-      .email-container{width:100%!important;max-width:100%!important}
-      .stack{display:block!important;width:100%!important}
+      .email-container{width:100%!important}
       .pad-sm{padding:24px 20px!important}
     }
   </style>
 </head>
 <body style="margin:0;padding:0;background:${BRAND.black}">
-  <!-- Preheader -->
-  ${preheader ? `<div style="display:none;font-size:1px;color:${BRAND.black};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${preheader}</div>` : ''}
-
+  ${preheader ? `<div style="display:none;font-size:1px;color:${BRAND.black};max-height:0;overflow:hidden">${preheader}</div>` : ''}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.black}">
     <tr><td align="center" style="padding:24px 12px">
-
-      <!-- Email container -->
       <table class="email-container" role="presentation" width="600" cellpadding="0" cellspacing="0"
         style="max-width:600px;width:100%;border-radius:20px;overflow:hidden;border:1px solid ${BRAND.darkBorder}">
-
-        <!-- Top accent bar -->
         <tr><td height="4" style="background:linear-gradient(90deg,${BRAND.orange},${BRAND.orangeLight},#FFB347);font-size:0;line-height:0">&nbsp;</td></tr>
-
-        <!-- Header -->
         <tr>
-          <td style="background:${BRAND.darkCard};padding:32px 40px 24px;border-bottom:1px solid ${BRAND.darkBorder}">
+          <td style="background:${BRAND.darkCard};padding:28px 40px 20px;border-bottom:1px solid ${BRAND.darkBorder}">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td><img src="${BRAND.logo}" alt="AceFit" height="44" style="display:block"/></td>
+                <td><img src="${BRAND.logo}" alt="AceFit" height="40" style="display:block"/></td>
                 <td align="right" style="vertical-align:middle">
-                  <span style="font-size:11px;color:${BRAND.gray};letter-spacing:2px;text-transform:uppercase;font-weight:600">Premium Fitness Wear</span>
+                  <span style="font-size:10px;color:${BRAND.gray};letter-spacing:2px;text-transform:uppercase;font-weight:600">Premium Fitness Wear</span>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
-
-        <!-- Body -->
         <tr>
-          <td class="pad-sm" style="background:${BRAND.darkCard};padding:40px">
+          <td class="pad-sm" style="background:${BRAND.darkCard};padding:36px 40px">
             ${body}
           </td>
         </tr>
-
-        <!-- Footer -->
         <tr>
-          <td style="background:${BRAND.black};padding:28px 40px;border-top:1px solid ${BRAND.darkBorder}">
+          <td style="background:${BRAND.black};padding:24px 40px;border-top:1px solid ${BRAND.darkBorder}">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="padding-bottom:16px">
-                  <a href="${BRAND.whatsapp}" style="display:inline-block;margin-right:12px;text-decoration:none">
+                <td style="padding-bottom:14px">
+                  <a href="${BRAND.whatsapp}" style="display:inline-block;margin-right:10px;text-decoration:none">
                     <span style="display:inline-block;background:#25D366;color:#fff;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px">WhatsApp Us</span>
                   </a>
-                  <a href="${BRAND.instagram}" style="display:inline-block;text-decoration:none">
-                    <span style="display:inline-block;background:linear-gradient(135deg,#e1306c,#833ab4);color:#fff;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px">@The_acefit</span>
+                  <a href="${BRAND.instagram}" style="display:inline-block;margin-right:10px;text-decoration:none">
+                    <span style="display:inline-block;background:linear-gradient(135deg,#e1306c,#833ab4);color:#fff;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px">Instagram</span>
+                  </a>
+                  <a href="${BRAND.tiktok}" style="display:inline-block;text-decoration:none">
+                    <span style="display:inline-block;background:#000;color:#fff;font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px">TikTok</span>
                   </a>
                 </td>
               </tr>
               <tr>
                 <td style="font-size:12px;color:${BRAND.gray};line-height:1.8">
-                  📞 ${BRAND.phone1} &nbsp;|&nbsp; ${BRAND.phone2}<br/>
-                  📧 <a href="mailto:${BRAND.email}" style="color:${BRAND.gray}">${BRAND.email}</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-top:16px;font-size:11px;color:#555">
-                  © ${new Date().getFullYear()} AceFit. All rights reserved.<br/>
-                  You received this email because you have an account or placed an order with AceFit.
+                  <strong style="color:${BRAND.lightGray||'#ccc'}">AceFit</strong> — Premium Fitness Wear<br/>
+                  📞 ${BRAND.phone1} | ${BRAND.phone2}<br/>
+                  ✉️ ${BRAND.email}<br/>
+                  <span style="font-size:11px">© ${new Date().getFullYear()} AceFit. All rights reserved.</span>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
-
       </table>
     </td></tr>
   </table>
 </body>
 </html>`
 
-// ─── Reusable UI blocks ───────────────────────────────────────
-const badge = (text, color) =>
-  `<span style="display:inline-block;background:${color}22;color:${color};font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:1px">${text}</span>`
+const btn = (text, url) =>
+  `<a href="${url}" style="display:inline-block;background:${BRAND.orange};color:#fff;font-size:14px;font-weight:700;padding:14px 32px;border-radius:12px;text-decoration:none;letter-spacing:0.5px">${text}</a>`
 
-const infoBox = (label, value, borderColor = BRAND.orange) =>
-  `<div style="background:#1A1A1A;border-radius:10px;padding:18px 20px;margin:8px 0;border-left:4px solid ${borderColor}">
-    <p style="color:${BRAND.gray};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 4px">${label}</p>
-    <p style="color:#fff;font-weight:700;font-size:17px;margin:0">${value}</p>
-  </div>`
+const divider = `<hr style="border:none;border-top:1px solid ${BRAND.darkBorder};margin:24px 0"/>`
 
-const divider = () =>
-  `<div style="height:1px;background:${BRAND.darkBorder};margin:24px 0"></div>`
+const orderTable = (items) => `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">
+  <tr>
+    <td style="font-size:11px;color:${BRAND.gray};font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:10px">Item</td>
+    <td style="font-size:11px;color:${BRAND.gray};font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:10px;text-align:center">Qty</td>
+    <td style="font-size:11px;color:${BRAND.gray};font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:10px;text-align:right">Price</td>
+  </tr>
+  ${items.map(i => `
+  <tr>
+    <td style="font-size:14px;color:#fff;padding:10px 0;border-top:1px solid ${BRAND.darkBorder}">
+      ${i.name}${i.size ? ` <span style="color:${BRAND.gray};font-size:12px">(${i.size})</span>` : ''}
+      ${i.color ? ` <span style="color:${BRAND.gray};font-size:12px">· ${i.color}</span>` : ''}
+    </td>
+    <td style="font-size:14px;color:#fff;padding:10px 0;border-top:1px solid ${BRAND.darkBorder};text-align:center">${i.qty}</td>
+    <td style="font-size:14px;color:${BRAND.orange};font-weight:700;padding:10px 0;border-top:1px solid ${BRAND.darkBorder};text-align:right">₦${Number(i.price * i.qty).toLocaleString()}</td>
+  </tr>`).join('')}
+</table>`
 
-const btn = (text, href, color = BRAND.orange) =>
-  `<a href="${href}" style="display:inline-block;background:${color};color:#fff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:14px;letter-spacing:0.5px">${text}</a>`
+export const emailTemplates = {
 
-const statusStep = (label, done, active, color) =>
-  `<div style="display:inline-block;text-align:center;width:22%">
-    <div style="width:36px;height:36px;border-radius:50%;background:${done ? color : '#2A2A2A'};margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:${done ? '16px' : '0'}">
-      ${done ? '✓' : ''}
-    </div>
-    <p style="font-size:10px;color:${done ? color : '#555'};margin:0;font-weight:${active ? '700' : '400'}">${label}</p>
-  </div>`
-
-// ─────────────────────────────────────────────────────────────
-// 1. WELCOME EMAIL
-// ─────────────────────────────────────────────────────────────
-export const welcomeEmail = (name) => ({
-  subject: `Welcome to AceFit, ${name}! 🔥`,
-  html: wrap(`
-    <h1 style="color:${BRAND.orange};font-size:32px;margin:0 0 8px;line-height:1.2">Welcome to<br/>the family! 🔥</h1>
-    <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0 0 28px">
-      Hey <strong style="color:#fff">${name || 'Champion'}</strong>, you've just joined thousands of athletes who train harder and look better with AceFit.
-    </p>
-
-    ${divider()}
-
-    <p style="color:${BRAND.gray};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 16px">Your Member Benefits</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      ${[
-        ['🛒', 'Easy Ordering', 'Shop via web or WhatsApp anytime'],
-        ['📦', 'Order Tracking', 'Live status updates sent to your email'],
-        ['❤️', 'Wishlist', 'Save your favourite items for later'],
-        ['⚡', 'Early Access', 'First to know about new drops & sales'],
-      ].map(([icon, title, sub]) => `
-        <tr>
-          <td style="padding:10px 0;border-bottom:1px solid ${BRAND.darkBorder}">
-            <span style="font-size:20px;margin-right:12px;vertical-align:middle">${icon}</span>
-            <strong style="color:#fff;font-size:14px;vertical-align:middle">${title}</strong>
-            <span style="color:${BRAND.gray};font-size:13px"> — ${sub}</span>
-          </td>
-        </tr>`
-      ).join('')}
-    </table>
-
-    ${divider()}
-
-    <table role="presentation" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding-right:12px">${btn('Shop Now 🔥', BRAND.siteUrl)}</td>
-        <td>${btn('WhatsApp Order', BRAND.whatsapp, '#25D366')}</td>
-      </tr>
-    </table>
-  `, `Welcome to AceFit, ${name}! Start shopping premium fitness wear.`)
-})
-
-// ─────────────────────────────────────────────────────────────
-// 2. OTP / LOGIN CODE
-// ─────────────────────────────────────────────────────────────
-export const otpEmail = (otp) => ({
-  subject: `${otp} is your AceFit login code`,
-  html: wrap(`
-    <p style="color:${BRAND.gray};font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 24px">Sign In Verification</p>
-    <h1 style="color:#fff;font-size:26px;margin:0 0 12px">Your one-time code</h1>
-    <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0 0 32px">
-      Enter this 6-digit code in the AceFit app to sign in. It expires in <strong style="color:#fff">10 minutes</strong>.
-    </p>
-
-    <!-- OTP box -->
-    <div style="background:linear-gradient(135deg,${BRAND.orange}22,${BRAND.orangeLight}11);border:2px solid ${BRAND.orange};border-radius:16px;padding:32px;text-align:center;margin-bottom:32px">
-      <p style="font-size:52px;font-weight:900;letter-spacing:16px;color:${BRAND.orange};margin:0;font-family:monospace">${otp}</p>
-      <p style="color:${BRAND.gray};font-size:12px;margin:12px 0 0">Valid for 10 minutes · One use only</p>
-    </div>
-
-    <div style="background:#1A1A1A;border-radius:10px;padding:16px 20px">
-      <p style="color:${BRAND.gray};font-size:13px;margin:0">
-        🔒 <strong style="color:#fff">Security tip:</strong> AceFit will never ask you to share this code with anyone. If you didn't request this, please ignore this email — your account is safe.
-      </p>
-    </div>
-  `, `${otp} – Your AceFit login code (expires in 10 minutes)`)
-})
-
-// ─────────────────────────────────────────────────────────────
-// 3. ORDER CONFIRMATION
-// ─────────────────────────────────────────────────────────────
-export const orderConfirmation = (order, items) => {
-  const orderId = order.id?.slice(0, 8).toUpperCase()
-  const total = Number(order.total || 0)
-  const deliveryFee = Number(order.delivery_fee || 0)
-  const subtotal = Number(order.subtotal || total)
-  return {
-    subject: `Order Confirmed #${orderId} – Your AceFit gear is being prepared! 🎉`,
+  // ── 1. OTP / Sign-in ─────────────────────────────────────
+  otp: ({ email, otp }) => ({
+    subject: `Your AceFit login code: ${otp}`,
     html: wrap(`
-      <!-- Hero -->
-      <div style="text-align:center;margin-bottom:32px">
-        <span style="font-size:48px">🎉</span>
-        <h1 style="color:${BRAND.orange};font-size:28px;margin:12px 0 8px">Order Confirmed!</h1>
-        <p style="color:${BRAND.lightGray};font-size:15px;margin:0">
-          Thank you <strong style="color:#fff">${order.customer_name || 'Champion'}</strong>! We've received your order and our team is on it.
-        </p>
+      <h1 style="font-size:28px;font-weight:900;color:#fff;margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">YOUR LOGIN CODE</h1>
+      <p style="font-size:14px;color:${BRAND.gray};margin:0 0 28px">Hi ${email} — here's your one-time code:</p>
+      <div style="background:#111;border:2px solid ${BRAND.orange};border-radius:16px;padding:24px;text-align:center;margin:0 0 24px">
+        <span style="font-size:42px;font-weight:900;color:${BRAND.orange};letter-spacing:10px;font-family:monospace">${otp}</span>
+        <p style="font-size:12px;color:${BRAND.gray};margin:12px 0 0">Valid for 10 minutes. Do not share with anyone.</p>
       </div>
+      <p style="font-size:13px;color:${BRAND.gray}">If you didn't request this, you can safely ignore this email.</p>
+    `, `Your AceFit login code is ${otp}`)
+  }),
 
-      ${infoBox('Order ID', `#${orderId}`)}
+  // ── 2. Welcome ───────────────────────────────────────────
+  welcome: ({ name, email }) => ({
+    subject: 'Welcome to AceFit 🔥 — Your Account is Ready',
+    html: wrap(`
+      <h1 style="font-size:32px;font-weight:900;color:#fff;margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">WELCOME TO THE TEAM, ${(name || email).toUpperCase()}!</h1>
+      <p style="font-size:15px;color:${BRAND.gray};margin:0 0 24px">You're now part of Nigeria's fastest-growing fitness community. Train harder, look better — with AceFit.</p>
+      <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 24px">
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 12px">✅ &nbsp;<strong style="color:#fff">Browse premium fitness wear</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 12px">✅ &nbsp;<strong style="color:#fff">Track your orders in real-time</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 12px">✅ &nbsp;<strong style="color:#fff">Save items to your wishlist</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0">✅ &nbsp;<strong style="color:#fff">Get exclusive member deals</strong></p>
+      </div>
+      ${btn('Shop Now', BRAND.siteUrl)}
+    `, 'Welcome to AceFit — Your account is ready!')
+  }),
 
-      ${divider()}
-
-      <!-- Items -->
-      <p style="color:${BRAND.gray};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 16px">Items Ordered</p>
-      ${(items || []).map(i => `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px">
+  // ── 3. Order Confirmation ────────────────────────────────
+  orderConfirm: ({ order }) => ({
+    subject: `Order Confirmed ✅ — #${order.id?.slice(0, 8).toUpperCase()}`,
+    html: wrap(`
+      <h1 style="font-size:28px;font-weight:900;color:#fff;margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">ORDER CONFIRMED! 🎉</h1>
+      <p style="font-size:14px;color:${BRAND.gray};margin:0 0 24px">Hey ${order.customer_name}, your order is confirmed and will be processed shortly.</p>
+      <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 20px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding:12px;background:#1A1A1A;border-radius:10px">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="width:50px;vertical-align:top;padding-right:12px">
-                    <img src="${i.image_url || BRAND.logo}" width="50" height="60" style="border-radius:8px;object-fit:cover;display:block"/>
-                  </td>
-                  <td style="vertical-align:middle">
-                    <p style="color:#fff;font-weight:600;font-size:14px;margin:0 0 4px">${i.name}</p>
-                    <p style="color:${BRAND.gray};font-size:12px;margin:0">Size: ${i.size} &nbsp;·&nbsp; Qty: ${i.qty}</p>
-                  </td>
-                  <td align="right" style="vertical-align:middle">
-                    <p style="color:${BRAND.orange};font-weight:700;font-size:15px;margin:0">₦${(i.price * i.qty).toLocaleString()}</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
+            <td style="font-size:12px;color:${BRAND.gray};padding-bottom:6px">Order ID</td>
+            <td style="font-size:13px;color:${BRAND.orange};font-weight:700;text-align:right">#${order.id?.slice(0,8).toUpperCase()}</td>
           </tr>
-        </table>`
-      ).join('')}
-
-      ${divider()}
-
-      <!-- Price summary -->
+          <tr>
+            <td style="font-size:12px;color:${BRAND.gray};padding-bottom:6px">Payment</td>
+            <td style="font-size:13px;color:${BRAND.green};font-weight:700;text-align:right">Paid ✓</td>
+          </tr>
+          <tr>
+            <td style="font-size:12px;color:${BRAND.gray};padding-bottom:6px">Delivery to</td>
+            <td style="font-size:13px;color:#fff;text-align:right">${order.delivery_state || 'Nigeria'}</td>
+          </tr>
+          <tr>
+            <td style="font-size:12px;color:${BRAND.gray}">ETA</td>
+            <td style="font-size:13px;color:#fff;text-align:right">${order.estimated_delivery || '2–5 days'}</td>
+          </tr>
+        </table>
+      </div>
+      ${orderTable(order.items || [])}
+      ${divider}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td style="padding:6px 0;color:${BRAND.gray};font-size:13px">Subtotal</td>
-          <td align="right" style="color:#fff;font-size:13px">₦${subtotal.toLocaleString()}</td>
+          <td style="font-size:13px;color:${BRAND.gray}">Subtotal</td>
+          <td style="font-size:13px;color:#fff;text-align:right">₦${Number(order.subtotal).toLocaleString()}</td>
         </tr>
         <tr>
-          <td style="padding:6px 0;color:${BRAND.gray};font-size:13px">Delivery (${order.delivery_state || ''})</td>
-          <td align="right" style="font-size:13px;color:${deliveryFee === 0 ? BRAND.green : '#fff'}">
-            ${deliveryFee === 0 ? 'FREE 🎉' : `₦${deliveryFee.toLocaleString()}`}
-          </td>
+          <td style="font-size:13px;color:${BRAND.gray}">Delivery</td>
+          <td style="font-size:13px;color:#fff;text-align:right">₦${Number(order.delivery_fee).toLocaleString()}</td>
         </tr>
         <tr>
-          <td style="padding:14px 0 6px;border-top:1px solid ${BRAND.darkBorder}"><strong style="color:#fff;font-size:16px">Total Paid</strong></td>
-          <td align="right" style="padding:14px 0 6px;border-top:1px solid ${BRAND.darkBorder}"><strong style="color:${BRAND.orange};font-size:18px">₦${total.toLocaleString()}</strong></td>
+          <td style="font-size:16px;font-weight:700;color:#fff;padding-top:10px">Total</td>
+          <td style="font-size:16px;font-weight:700;color:${BRAND.orange};text-align:right;padding-top:10px">₦${Number(order.total).toLocaleString()}</td>
         </tr>
       </table>
+      <div style="margin-top:28px">${btn('Track My Order', `${BRAND.siteUrl}/orders?ref=${order.id}`)}</div>
+    `, `Your AceFit order #${order.id?.slice(0,8).toUpperCase()} is confirmed!`)
+  }),
 
-      ${divider()}
+  // ── 4. Order Status Update ───────────────────────────────
+  orderStatus: ({ order, newStatus }) => {
+    const statusMap = {
+      processing:       { icon: '⚙️',  label: 'Being Processed',     msg: 'Our team is preparing your order.' },
+      packed:           { icon: '📦',  label: 'Packed & Ready',       msg: 'Your order is packed and ready for pickup by our delivery partner.' },
+      shipped:          { icon: '🚚',  label: 'On Its Way!',          msg: `Your order is on the way. ETA: ${order.estimated_delivery || '2-5 days'}.` },
+      out_for_delivery: { icon: '🛵',  label: 'Out for Delivery',     msg: 'Your order is out for delivery today!' },
+      delivered:        { icon: '🎉',  label: 'Delivered!',           msg: 'Your order has been delivered. We hope you love it!' },
+      cancelled:        { icon: '❌',  label: 'Order Cancelled',      msg: 'Your order has been cancelled. Contact us for help.' },
+    }
+    const s = statusMap[newStatus] || { icon: '📋', label: newStatus, msg: 'Your order status has been updated.' }
+    return {
+      subject: `${s.icon} Order Update — ${s.label} #${order.id?.slice(0,8).toUpperCase()}`,
+      html: wrap(`
+        <div style="text-align:center;margin-bottom:28px">
+          <span style="font-size:56px">${s.icon}</span>
+          <h1 style="font-size:28px;font-weight:900;color:#fff;margin:12px 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">${s.label.toUpperCase()}</h1>
+          <p style="font-size:14px;color:${BRAND.gray};margin:0">${s.msg}</p>
+        </div>
+        <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 24px">
+          <p style="font-size:13px;color:${BRAND.gray};margin:0 0 6px">Order ID: <strong style="color:${BRAND.orange}">#${order.id?.slice(0,8).toUpperCase()}</strong></p>
+          <p style="font-size:13px;color:${BRAND.gray};margin:0">Customer: <strong style="color:#fff">${order.customer_name}</strong></p>
+        </div>
+        ${newStatus === 'delivered' ? `
+        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:16px;margin:0 0 24px;text-align:center">
+          <p style="font-size:14px;color:${BRAND.green};font-weight:600;margin:0">Leave us a review and help other shoppers! 💪</p>
+        </div>
+        ${btn('Leave a Review', BRAND.siteUrl + '/#feedback')}` :
+        btn('Track My Order', `${BRAND.siteUrl}/orders?ref=${order.id}`)}
+      `, `Your AceFit order is now: ${s.label}`)
+    }
+  },
 
-      <!-- Delivery info -->
-      <p style="color:${BRAND.gray};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 12px">Delivery Details</p>
-      <div style="background:#1A1A1A;border-radius:10px;padding:18px 20px">
-        <p style="color:#fff;font-weight:600;font-size:14px;margin:0 0 6px">${order.customer_name}</p>
-        <p style="color:${BRAND.lightGray};font-size:13px;margin:0 0 4px">📍 ${order.delivery_address}${order.delivery_landmark ? ` (near ${order.delivery_landmark})` : ''}</p>
-        <p style="color:${BRAND.lightGray};font-size:13px;margin:0 0 4px">📞 ${order.customer_phone}</p>
-        ${order.estimated_delivery ? `<p style="color:${BRAND.orange};font-size:12px;font-weight:600;margin:8px 0 0">⏱ Est. delivery: ${order.estimated_delivery}</p>` : ''}
-      </div>
-
-      ${divider()}
-
-      <!-- CTA -->
-      <p style="color:${BRAND.lightGray};font-size:14px;line-height:1.7;margin:0 0 24px">
-        We'll email you as soon as your order is picked, packed and dispatched. You can also track your order anytime from your profile.
-      </p>
-      <table role="presentation" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding-right:12px">${btn('Track My Order', `${BRAND.siteUrl}/orders`)}</td>
-          <td>${btn('Need Help?', BRAND.whatsapp, '#25D366')}</td>
-        </tr>
-      </table>
-    `, `Order #${orderId} confirmed! Estimated delivery: ${order.estimated_delivery || '1–5 days'}`)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 4. ORDER STATUS UPDATE  (admin sends this)
-// ─────────────────────────────────────────────────────────────
-export const orderStatusUpdate = (order, newStatus, note = '') => {
-  const orderId = order.id?.slice(0, 8).toUpperCase()
-  const statusMap = {
-    processing: { emoji: '📦', label: 'Being Packed',     color: BRAND.blue,   desc: 'Great news! Our team has started carefully packing your order.' },
-    shipped:    { emoji: '🚚', label: 'Out for Delivery', color: BRAND.orange, desc: `Your order is on its way to ${order.delivery_state}! Sit tight — it'll be with you soon.` },
-    delivered:  { emoji: '✅', label: 'Delivered!',       color: BRAND.green,  desc: "Your AceFit gear has arrived! We hope you love it. Time to go crush those workouts. 🔥" },
-    cancelled:  { emoji: '❌', label: 'Order Cancelled',  color: BRAND.red,    desc: 'Your order has been cancelled. If this was a mistake, please contact us immediately.' },
-  }
-  const info = statusMap[newStatus] || { emoji: '📋', label: newStatus, color: BRAND.orange, desc: 'Your order status has been updated.' }
-  const pipelineStatuses = ['pending', 'processing', 'shipped', 'delivered']
-  const currentIdx = pipelineStatuses.indexOf(newStatus)
-
-  return {
-    subject: `${info.emoji} Your AceFit order #${orderId} – ${info.label}`,
+  // ── 5. Payment Failed ────────────────────────────────────
+  paymentFailed: ({ order, reference }) => ({
+    subject: '⚠️ Payment Failed — Your AceFit Order',
     html: wrap(`
-      <!-- Status hero -->
-      <div style="text-align:center;padding:16px 0 32px">
-        <span style="font-size:52px">${info.emoji}</span>
-        <h1 style="color:${info.color};font-size:26px;margin:12px 0 8px">${info.label}</h1>
-        <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0">
-          Hi <strong style="color:#fff">${order.customer_name || 'Champion'}</strong>, ${info.desc}
-        </p>
+      <h1 style="font-size:28px;font-weight:900;color:${BRAND.red};margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">PAYMENT FAILED</h1>
+      <p style="font-size:14px;color:${BRAND.gray};margin:0 0 24px">Hi ${order.customer_name}, your payment for order <strong style="color:${BRAND.orange}">#${order.id?.slice(0,8).toUpperCase()}</strong> was not successful.</p>
+      <div style="background:#111;border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:20px;margin:0 0 24px">
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Reference: <strong style="color:#fff">${reference || 'N/A'}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0">Your items are still in your cart. Please try again.</p>
       </div>
+      <div style="margin-bottom:16px">${btn('Try Again', BRAND.siteUrl)}</div>
+      <p style="font-size:13px;color:${BRAND.gray}">Need help? WhatsApp us on <a href="${BRAND.whatsapp}" style="color:${BRAND.orange}">${BRAND.phone1}</a></p>
+    `, 'Your AceFit payment was not successful')
+  }),
 
-      ${infoBox('Order ID', `#${orderId}`, info.color)}
-
-      ${note ? `
-      <div style="background:#1A1A1A;border-radius:10px;padding:16px 20px;margin:16px 0;border-left:4px solid ${info.color}">
-        <p style="color:${BRAND.gray};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 6px">Note from AceFit</p>
-        <p style="color:${BRAND.lightGray};font-size:14px;line-height:1.6;margin:0">${note}</p>
-      </div>` : ''}
-
-      ${divider()}
-
-      <!-- Pipeline tracker -->
-      ${newStatus !== 'cancelled' ? `
-      <p style="color:${BRAND.gray};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 20px;text-align:center">Order Progress</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px">
-        <tr>
-          ${['Order Placed', 'Packing', 'In Transit', 'Delivered'].map((label, i) => {
-            const done = i <= currentIdx
-            const active = i === currentIdx
-            const colors = [BRAND.yellow, BRAND.blue, BRAND.orange, BRAND.green]
-            return `<td style="text-align:center;vertical-align:top;padding:0 4px">
-              <div style="width:34px;height:34px;border-radius:50%;background:${done ? colors[i] : '#2A2A2A'};margin:0 auto 8px;line-height:34px;text-align:center;font-size:${done ? '15px' : '0'};color:#fff">${done ? '✓' : ''}</div>
-              <p style="font-size:10px;color:${done ? colors[i] : '#555'};margin:0;font-weight:${active ? '700' : '400'}">${label}</p>
-            </td>`
-          }).join(`<td style="vertical-align:middle;padding-bottom:20px"><div style="height:2px;background:#2A2A2A;width:100%"></div></td>`)}
-        </tr>
-      </table>` : ''}
-
-      ${divider()}
-
-      <!-- Delivery reminder -->
-      <div style="background:#1A1A1A;border-radius:10px;padding:16px 20px">
-        <p style="color:${BRAND.gray};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 10px">Delivering to</p>
-        <p style="color:#fff;font-weight:600;font-size:14px;margin:0 0 4px">${order.customer_name}</p>
-        <p style="color:${BRAND.lightGray};font-size:13px;margin:0">📍 ${order.delivery_address}</p>
-        <p style="color:${BRAND.lightGray};font-size:13px;margin:4px 0 0">📞 ${order.customer_phone}</p>
-      </div>
-
-      ${divider()}
-
-      <table role="presentation" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding-right:12px">${btn('Track My Order', `${BRAND.siteUrl}/orders`)}</td>
-          <td>${btn('WhatsApp Support', BRAND.whatsapp, '#25D366')}</td>
-        </tr>
-      </table>
-    `, `Your order #${orderId} is now: ${info.label}`)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 5. PAYMENT FAILED
-// ─────────────────────────────────────────────────────────────
-export const paymentFailed = (order) => {
-  const orderId = order.id?.slice(0, 8).toUpperCase() || order
-  return {
-    subject: `Payment Failed – AceFit Order #${orderId}`,
+  // ── 6. Support Ticket ────────────────────────────────────
+  ticketCreated: ({ ticket }) => ({
+    subject: `Support Ticket Received — ${ticket.ticket_no || '#TKT'}`,
     html: wrap(`
-      <div style="text-align:center;margin-bottom:32px">
-        <span style="font-size:48px">😕</span>
-        <h1 style="color:${BRAND.red};font-size:26px;margin:12px 0 8px">Payment Unsuccessful</h1>
-        <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0">
-          Hi ${order.customer_name || 'there'}, your payment for order <strong style="color:#fff">#${orderId}</strong> could not be processed.
-        </p>
+      <h1 style="font-size:26px;font-weight:900;color:#fff;margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">WE GOT YOUR MESSAGE</h1>
+      <p style="font-size:14px;color:${BRAND.gray};margin:0 0 24px">Hi ${ticket.name}, our team will respond within 1 hour during business hours.</p>
+      <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 24px">
+        <p style="font-size:12px;color:${BRAND.gray};margin:0 0 8px">Ticket No: <strong style="color:${BRAND.orange}">${ticket.ticket_no || 'N/A'}</strong></p>
+        <p style="font-size:12px;color:${BRAND.gray};margin:0 0 8px">Subject: <strong style="color:#fff">${ticket.subject || 'General Enquiry'}</strong></p>
+        <p style="font-size:12px;color:${BRAND.gray};margin:0">Your message: <em style="color:#aaa">"${ticket.message}"</em></p>
       </div>
+      <p style="font-size:13px;color:${BRAND.gray}">For urgent issues, WhatsApp us directly: <a href="${BRAND.whatsapp}" style="color:${BRAND.orange}">${BRAND.phone1}</a></p>
+    `, `Ticket ${ticket.ticket_no} received — we'll be in touch soon`)
+  }),
 
-      <div style="background:#1A1A1A;border-radius:10px;padding:20px;border-left:4px solid ${BRAND.red};margin-bottom:28px">
-        <p style="color:#fff;font-weight:600;margin:0 0 8px">What may have happened:</p>
-        <ul style="color:${BRAND.lightGray};font-size:13px;line-height:1.9;margin:0;padding-left:18px">
-          <li>Insufficient balance in your OPay account</li>
-          <li>Card or bank transfer declined</li>
-          <li>Network/connectivity issue during payment</li>
-          <li>Payment session timed out</li>
-        </ul>
-      </div>
-
-      <p style="color:${BRAND.lightGray};font-size:14px;line-height:1.7;margin:0 0 24px">
-        Your cart has been saved. Click below to try again — or contact us on WhatsApp and we'll help you complete the order.
-      </p>
-
-      <table role="presentation" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="padding-right:12px">${btn('Retry Payment', `${BRAND.siteUrl}`)}</td>
-          <td>${btn('WhatsApp Help', BRAND.whatsapp, '#25D366')}</td>
-        </tr>
-      </table>
-    `, `Payment failed for AceFit order #${orderId}. Retry anytime.`)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 6. SUPPORT TICKET RAISED
-// ─────────────────────────────────────────────────────────────
-export const supportTicketRaised = (ticket) => {
-  const ticketId = ticket.id?.slice(0, 8).toUpperCase()
-  return {
-    subject: `Support Ticket #${ticketId} Received – AceFit`,
+  // ── 7. Support Reply ─────────────────────────────────────
+  ticketReply: ({ ticket, reply }) => ({
+    subject: `Re: Your AceFit Support Ticket — ${ticket.ticket_no}`,
     html: wrap(`
-      <h1 style="color:${BRAND.orange};font-size:26px;margin:0 0 12px">We got your message! 💬</h1>
-      <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0 0 28px">
-        Hi <strong style="color:#fff">${ticket.name}</strong>, thank you for reaching out. Our support team has received your request and will respond within <strong style="color:#fff">24 hours</strong>.
-      </p>
-
-      ${infoBox('Ticket ID', `#${ticketId}`)}
-
-      <div style="background:#1A1A1A;border-radius:10px;padding:18px 20px;margin-top:12px">
-        <p style="color:${BRAND.gray};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px">Your Message</p>
-        <p style="color:${BRAND.lightGray};font-size:14px;line-height:1.7;margin:0">"${ticket.message}"</p>
+      <h1 style="font-size:26px;font-weight:900;color:#fff;margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">WE'VE REPLIED</h1>
+      <p style="font-size:14px;color:${BRAND.gray};margin:0 0 24px">Hi ${ticket.name}, here's our response to your ticket <strong style="color:${BRAND.orange}">${ticket.ticket_no}</strong>:</p>
+      <div style="background:#111;border-left:3px solid ${BRAND.orange};border-radius:0 12px 12px 0;padding:20px;margin:0 0 24px">
+        <p style="font-size:14px;color:#fff;margin:0;line-height:1.7">${reply}</p>
       </div>
+      <p style="font-size:13px;color:${BRAND.gray}">Still need help? Reply to this email or WhatsApp: <a href="${BRAND.whatsapp}" style="color:${BRAND.orange}">${BRAND.phone1}</a></p>
+    `, `AceFit replied to your ticket ${ticket.ticket_no}`)
+  }),
 
-      ${divider()}
-
-      <p style="color:${BRAND.lightGray};font-size:14px;line-height:1.7;margin:0 0 24px">
-        Need a faster response? WhatsApp us directly — we're usually online.
-      </p>
-
-      ${btn('WhatsApp Support', `${BRAND.whatsapp}?text=${encodeURIComponent(`Hi, following up on ticket #${ticketId}`)}`, '#25D366')}
-    `, `Ticket #${ticketId} received — we'll respond within 24 hours.`)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// 7. SUPPORT TICKET REPLY
-// ─────────────────────────────────────────────────────────────
-export const supportTicketReply = (ticket) => {
-  const ticketId = ticket.id?.slice(0, 8).toUpperCase()
-  return {
-    subject: `Re: Your Support Ticket #${ticketId} – AceFit`,
+  // ── 8. Admin: New Order Alert ────────────────────────────
+  adminNewOrder: ({ order }) => ({
+    subject: `🛒 New Order #${order.id?.slice(0,8).toUpperCase()} — ₦${Number(order.total).toLocaleString()}`,
     html: wrap(`
-      <h1 style="color:${BRAND.green};font-size:26px;margin:0 0 12px">We've replied! ✅</h1>
-      <p style="color:${BRAND.lightGray};font-size:15px;line-height:1.7;margin:0 0 28px">
-        Hi <strong style="color:#fff">${ticket.name}</strong>, our support team has responded to your ticket.
-      </p>
-
-      ${infoBox('Ticket ID', `#${ticketId}`, BRAND.green)}
-
-      <div style="background:#1A1A1A;border-radius:10px;padding:18px 20px;margin:12px 0">
-        <p style="color:${BRAND.gray};font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px">Your Original Message</p>
-        <p style="color:${BRAND.gray};font-size:13px;line-height:1.6;margin:0;font-style:italic">"${ticket.message}"</p>
+      <h1 style="font-size:26px;font-weight:900;color:${BRAND.orange};margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">NEW ORDER RECEIVED</h1>
+      <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 20px">
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Order: <strong style="color:${BRAND.orange}">#${order.id?.slice(0,8).toUpperCase()}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Customer: <strong style="color:#fff">${order.customer_name}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Phone: <strong style="color:#fff">${order.customer_phone}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">State: <strong style="color:#fff">${order.delivery_state}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0">Total: <strong style="color:${BRAND.green};font-size:16px">₦${Number(order.total).toLocaleString()}</strong></p>
       </div>
+      ${orderTable(order.items || [])}
+      <div style="margin-top:24px">${btn('View in Admin', `${BRAND.siteUrl}/admin/orders`)}</div>
+    `, `New order from ${order.customer_name}`)
+  }),
 
-      <div style="background:linear-gradient(135deg,${BRAND.green}15,${BRAND.green}08);border:1px solid ${BRAND.green}33;border-radius:10px;padding:20px;margin:12px 0">
-        <p style="color:${BRAND.green};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 10px">AceFit Support Reply</p>
-        <p style="color:#fff;font-size:14px;line-height:1.7;margin:0">${ticket.reply}</p>
+  // ── 9. Admin: New Support Ticket ─────────────────────────
+  adminNewTicket: ({ ticket }) => ({
+    subject: `🎫 New Support Ticket — ${ticket.ticket_no}`,
+    html: wrap(`
+      <h1 style="font-size:26px;font-weight:900;color:${BRAND.orange};margin:0 0 8px;font-family:Impact,sans-serif;letter-spacing:2px">NEW SUPPORT TICKET</h1>
+      <div style="background:#111;border-radius:12px;padding:20px;margin:0 0 20px">
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">From: <strong style="color:#fff">${ticket.name}</strong> (${ticket.email})</p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Phone: <strong style="color:#fff">${ticket.phone || 'N/A'}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0 0 8px">Subject: <strong style="color:#fff">${ticket.subject || 'General'}</strong></p>
+        <p style="font-size:13px;color:${BRAND.gray};margin:0">Message: <em style="color:#aaa">"${ticket.message}"</em></p>
       </div>
+      <div style="margin-top:24px">${btn('Reply in Admin', `${BRAND.siteUrl}/admin/tickets`)}</div>
+    `, `New support ticket from ${ticket.name}`)
+  }),
 
-      ${ticket.status === 'resolved' ? `
-      <div style="background:#1A1A1A;border-radius:10px;padding:14px 18px;margin-top:16px;text-align:center">
-        <span style="color:${BRAND.green};font-weight:700">✅ Ticket Resolved</span>
-        <span style="color:${BRAND.gray};font-size:13px"> — If you need further help, reply to this email or contact us on WhatsApp.</span>
-      </div>` : ''}
-
-      ${divider()}
-
-      ${btn('WhatsApp Us', BRAND.whatsapp, '#25D366')}
-    `, `AceFit support has replied to your ticket #${ticketId}.`)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// LEGACY EXPORTS (backward compat with old template names)
-// ─────────────────────────────────────────────────────────────
-export const emailTemplates = {
-  welcomeEmail,
-  otpEmail,
-  orderConfirmation,
-  orderStatusUpdate,
-  paymentFailed,
-  supportTicket: supportTicketRaised,
-  supportTicketReply,
-  ticketResolved: supportTicketReply,
+  // ── 10. Newsletter / Welcome ─────────────────────────────
+  newsletter: ({ email, subject, content }) => ({
+    subject: subject || 'New from AceFit 🔥',
+    html: wrap(`
+      <h1 style="font-size:28px;font-weight:900;color:#fff;margin:0 0 20px;font-family:Impact,sans-serif;letter-spacing:2px">ACEFIT NEWS</h1>
+      <div style="font-size:15px;color:#ccc;line-height:1.8">${content}</div>
+      <div style="margin-top:28px">${btn('Shop Now', BRAND.siteUrl)}</div>
+    `, subject)
+  }),
 }
 
 export default emailTemplates

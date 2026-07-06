@@ -1,89 +1,59 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Search, Mail, Phone, ShoppingBag } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useStore } from '../../lib/store'
-
 
 export default function AdminCustomers() {
-  const { theme } = useStore()
   const [customers, setCustomers] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const isDark = theme === 'dark'
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-        if (data?.length) setCustomers(data)
-      } catch {}
-    }
-    load()
+    supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { setCustomers(data || []); setLoading(false) })
   }, [])
 
-  const filtered = customers.filter(c =>
-    !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = customers.filter(c => !search || c.email?.toLowerCase().includes(search.toLowerCase()) || c.name?.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className={`font-display text-3xl md:text-4xl ${isDark ? 'text-white' : 'text-gray-900'}`}>CUSTOMERS</h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{customers.length} registered customers</p>
+        <h1 className="text-white text-2xl font-bold">Customers</h1>
+        <p className="text-gray-500 text-sm mt-1">{customers.length} registered customers</p>
       </div>
-
-      <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border max-w-md ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
-        <Search size={15} className="text-brand-orange" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search customers..." className={`flex-1 bg-transparent text-sm outline-none ${isDark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`} />
-      </div>
-
-      <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-brand-dark-card border-brand-dark-border' : 'bg-white border-gray-200'}`}>
-        <div className="overflow-x-auto -mx-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={`text-xs uppercase tracking-wider border-b ${isDark ? 'bg-black/30 text-gray-500 border-brand-dark-border' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
-                <th className="px-5 py-3 text-left">Customer</th>
-                <th className="px-5 py-3 text-center">Orders</th>
-                <th className="px-5 py-3 text-right">Total Spent</th>
-                <th className="px-5 py-3 text-center hidden md:table-cell">Joined</th>
-                <th className="px-5 py-3 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((customer, i) => (
-                <motion.tr key={customer.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
-                  className={`border-t ${isDark ? 'border-brand-dark-border hover:bg-white/[0.02]' : 'border-gray-50 hover:bg-gray-50'}`}>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-brand-orange rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
-                        {customer.name?.charAt(0) || customer.email?.charAt(0)}
-                      </div>
-                      <div>
-                        <p className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{customer.name || 'Anonymous'}</p>
-                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{customer.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <ShoppingBag size={13} className="text-brand-orange" />
-                      <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{customer.orders}</span>
-                    </div>
-                  </td>
-                  <td className={`px-5 py-4 text-right font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    <span className="text-brand-orange">₦{Number(customer.total_spent || 0).toLocaleString()}</span>
-                  </td>
-                  <td className={`px-5 py-4 text-center text-xs hidden md:table-cell ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{customer.joined || new Date(customer.created_at).toLocaleDateString()}</td>
-                  <td className="px-5 py-4 text-center">
-                    <a href={`mailto:${customer.email}`} className={`p-2 rounded-lg inline-flex transition-colors btn-press ${isDark ? 'text-gray-400 hover:text-brand-orange hover:bg-brand-orange/10' : 'text-gray-500 hover:text-brand-orange hover:bg-brand-orange/5'}`}>
-                      <Mail size={14} />
-                    </a>
-                  </td>
-                </motion.tr>
+      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search customers…"
+        className="w-full max-w-sm px-4 py-2.5 bg-[#141414] border border-[#2A2A2A] rounded-xl text-white text-sm outline-none focus:border-brand-orange placeholder-gray-600"/>
+      <div className="bg-[#141414] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-[#1A1A1A]">
+              {['Customer','Email','Phone','Orders','Spent','Joined'].map(h => (
+                <th key={h} className="text-left px-4 py-3 text-xs text-gray-500 font-semibold uppercase tracking-wider">{h}</th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? [1,2,3].map(i => (
+              <tr key={i} className="border-b border-[#1A1A1A]">{[1,2,3,4,5,6].map(j => <td key={j} className="px-4 py-4"><div className="h-4 bg-[#2A2A2A] rounded animate-pulse"/></td>)}</tr>
+            )) : filtered.length === 0 ? (
+              <tr><td colSpan={6} className="text-center text-gray-500 py-16">No customers yet</td></tr>
+            ) : filtered.map(c => (
+              <tr key={c.id} className="border-b border-[#1A1A1A] hover:bg-white/2 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-brand-orange rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {(c.name || c.email || 'A').charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-white text-sm">{c.name || 'Anonymous'}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-400 text-sm">{c.email}</td>
+                <td className="px-4 py-3 text-gray-400 text-sm">{c.phone || '—'}</td>
+                <td className="px-4 py-3 text-white text-sm">{c.total_orders || 0}</td>
+                <td className="px-4 py-3 text-brand-orange text-sm font-semibold">₦{Number(c.total_spent || 0).toLocaleString()}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )

@@ -1,202 +1,99 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, MessageCircle, CreditCard, Package } from 'lucide-react'
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { getPlaceholder } from '../lib/placeholders'
-import CheckoutModal from './CheckoutModal'
-import toast from 'react-hot-toast'
 
-const WHATSAPP = '2347025692097'
-
-export default function CartSidebar() {
-  const { cartOpen, setCartOpen, cart, removeFromCart, updateQty, clearCart, cartTotal, theme, user, setAuthModalOpen } = useStore()
-  const [checkoutOpen, setCheckoutOpen] = useState(false)
+export default function CartSidebar({ open, onClose, onCheckout }) {
+  const { cart, removeFromCart, updateQty, cartTotal, theme } = useStore()
   const isDark = theme === 'dark'
   const total = cartTotal()
 
-  const buildWhatsAppMessage = () => {
-    const items = cart.map(i =>
-      `• ${i.name} (Size: ${i.size}) × ${i.qty} = ₦${(i.price * i.qty).toLocaleString()}`
-    ).join('\n')
-    return encodeURIComponent(
-      `🛒 *AceFit Order*\n\n${items}\n\n*Subtotal: ₦${total.toLocaleString()}*\n\n_Please reply with your delivery address to complete the order._`
-    )
-  }
-
-  const handleWhatsApp = () => {
-    if (!cart.length) return
-    window.open(`https://wa.me/${WHATSAPP}?text=${buildWhatsAppMessage()}`, '_blank')
-    toast.success('Redirecting to WhatsApp...')
-  }
-
-  const handleOpay = () => {
-    if (!user) {
-      setAuthModalOpen(true)
-      toast('Please sign in to checkout with OPay', { icon: '🔐' })
-      return
-    }
-    setCartOpen(false)
-    setTimeout(() => setCheckoutOpen(true), 200)
-  }
-
   return (
-    <>
-      <AnimatePresence>
-        {cartOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[80] bg-black/70 modal-backdrop"
-              onClick={() => setCartOpen(false)}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className={`fixed right-0 top-0 bottom-0 w-full max-w-md z-[90] flex flex-col ${isDark ? 'bg-brand-dark-card' : 'bg-white'}`}
-            >
-              {/* Header */}
-              <div className={`flex items-center justify-between p-5 border-b shrink-0 ${isDark ? 'border-brand-dark-border' : 'border-gray-100'}`}>
-                <div className="flex items-center gap-2">
-                  <ShoppingBag size={20} className="text-brand-orange" />
-                  <h2 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>Cart</h2>
-                  {cart.length > 0 && (
-                    <span className="bg-brand-orange text-white text-xs px-2 py-0.5 rounded-full font-bold">{cart.length}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {cart.length > 0 && (
-                    <button onClick={clearCart} className={`text-xs transition-colors hover:text-red-400 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      Clear all
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setCartOpen(false)}
-                    className={`p-1.5 rounded-lg btn-press ${isDark ? 'text-gray-400 hover:bg-brand-dark-border' : 'text-gray-500 hover:bg-gray-100'}`}
-                  >
-                    <X size={18} />
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm" onClick={onClose}/>
+
+          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className={`fixed top-0 right-0 h-full w-full max-w-sm z-[110] flex flex-col ${isDark ? 'bg-[#0F0F0F]' : 'bg-white'}`}>
+
+            {/* Header */}
+            <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-[#2A2A2A]' : 'border-gray-200'}`}>
+              <div>
+                <h2 className={`font-display text-2xl ${isDark ? 'text-white' : 'text-gray-900'}`}>YOUR BAG</h2>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{cart.reduce((t, i) => t + i.qty, 0)} item{cart.reduce((t, i) => t + i.qty, 0) !== 1 ? 's' : ''}</p>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-brand-orange/10 text-gray-400 hover:text-brand-orange transition-all"><X size={20}/></button>
+            </div>
+
+            {/* Items */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {cart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <ShoppingBag size={48} className="text-brand-orange/30 mb-4"/>
+                  <p className={`font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Your bag is empty</p>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>Add something fire to get started</p>
+                  <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-brand-orange text-white text-sm font-bold rounded-xl hover:bg-brand-orange-light transition-all">
+                    Shop Now
                   </button>
                 </div>
-              </div>
-
-              {/* Items */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-64 gap-4">
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isDark ? 'bg-brand-dark-border' : 'bg-gray-100'}`}>
-                      <Package size={32} className={isDark ? 'text-gray-600' : 'text-gray-400'} />
-                    </div>
-                    <p className={isDark ? 'text-gray-500' : 'text-gray-400'}>Your cart is empty</p>
-                    <button
-                      onClick={() => setCartOpen(false)}
-                      className="px-6 py-2.5 bg-brand-orange text-white rounded-xl text-sm font-medium btn-press"
-                    >
-                      Start Shopping
-                    </button>
+              ) : cart.map((item, i) => (
+                <motion.div key={`${item.id}-${item.size}-${item.color}`} layout initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                  className={`flex gap-3 p-3 rounded-2xl ${isDark ? 'bg-[#141414]' : 'bg-gray-50'}`}>
+                  <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-[#1A1A1A]">
+                    {item.image_url
+                      ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover"/>
+                      : <div className="w-full h-full flex items-center justify-center"><ShoppingBag size={16} className="text-gray-600"/></div>}
                   </div>
-                ) : (
-                  cart.map((item, i) => (
-                    <motion.div
-                      key={`${item.id}-${item.size}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: i * 0.05 }}
-                      className={`flex gap-3 p-3 rounded-xl ${isDark ? 'bg-black/30 border border-brand-dark-border' : 'bg-gray-50 border border-gray-100'}`}
-                    >
-                      <div className="w-16 h-20 rounded-xl overflow-hidden bg-gray-800 shrink-0">
-                        <img
-                          src={item.image_url || getPlaceholder(item.category)}
-                          alt={item.name}
-                          className="w-full h-full object-cover object-top"
-                        />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold line-clamp-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.name}</p>
+                    <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {item.size}{item.color ? ` · ${item.color}` : ''}
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-brand-orange text-sm font-bold">₦{(item.price * item.qty).toLocaleString()}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => item.qty === 1 ? removeFromCart(item.id, item.size, item.color) : updateQty(item.id, item.size, item.qty - 1, item.color)}
+                          className="w-6 h-6 rounded-lg bg-brand-orange/10 text-brand-orange flex items-center justify-center hover:bg-brand-orange hover:text-white transition-all">
+                          {item.qty === 1 ? <Trash2 size={10}/> : <Minus size={10}/>}
+                        </button>
+                        <span className={`w-5 text-center text-xs font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.qty}</span>
+                        <button onClick={() => updateQty(item.id, item.size, item.qty + 1, item.color)}
+                          className="w-6 h-6 rounded-lg bg-brand-orange/10 text-brand-orange flex items-center justify-center hover:bg-brand-orange hover:text-white transition-all">
+                          <Plus size={10}/>
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.name}</h4>
-                        <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Size: {item.size}</p>
-                        <p className="text-brand-orange font-bold text-sm mt-1">₦{Number(item.price).toLocaleString()}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <button
-                            onClick={() => item.qty > 1 ? updateQty(item.id, item.size, item.qty - 1) : removeFromCart(item.id, item.size)}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors btn-press ${isDark ? 'bg-brand-dark-border hover:bg-brand-orange hover:text-white text-gray-400' : 'bg-gray-200 hover:bg-brand-orange hover:text-white text-gray-600'}`}
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className={`text-sm font-bold w-6 text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.qty}</span>
-                          <button
-                            onClick={() => updateQty(item.id, item.size, item.qty + 1)}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors btn-press ${isDark ? 'bg-brand-dark-border hover:bg-brand-orange hover:text-white text-gray-400' : 'bg-gray-200 hover:bg-brand-orange hover:text-white text-gray-600'}`}
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.id, item.size)}
-                        className="text-gray-500 hover:text-red-400 transition-colors p-1 self-start btn-press"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-
-              {/* Footer */}
-              {cart.length > 0 && (
-                <div className={`p-5 border-t space-y-4 shrink-0 ${isDark ? 'border-brand-dark-border' : 'border-gray-100'}`}>
-                  {/* Summary */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-sm">
-                      <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Subtotal ({cart.reduce((t,i) => t + i.qty, 0)} items)</span>
-                      <span className={isDark ? 'text-white' : 'text-gray-900'}>₦{total.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Delivery fee</span>
-                      <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Calculated at checkout</span>
-                    </div>
-                    <div className={`flex justify-between font-bold text-lg pt-2 border-t ${isDark ? 'border-brand-dark-border' : 'border-gray-100'}`}>
-                      <span className={isDark ? 'text-white' : 'text-gray-900'}>Subtotal</span>
-                      <span className="text-brand-orange">₦{total.toLocaleString()}</span>
                     </div>
                   </div>
+                </motion.div>
+              ))}
+            </div>
 
-                  {/* Checkout options */}
-                  <div className="space-y-2.5">
-                    {/* OPay – Full checkout with address */}
-                    <button
-                      onClick={handleOpay}
-                      className="w-full flex items-center justify-center gap-2.5 py-4 bg-brand-orange hover:bg-brand-orange-light text-white font-bold rounded-xl transition-all btn-press shadow-lg shadow-brand-orange/30"
-                    >
-                      <CreditCard size={18} />
-                      Checkout with OPay
-                    </button>
-
-                    {/* WhatsApp – quick order */}
-                    <button
-                      onClick={handleWhatsApp}
-                      className="w-full flex items-center justify-center gap-2.5 py-3.5 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl transition-all btn-press shadow-lg shadow-green-900/30"
-                    >
-                      <MessageCircle size={18} />
-                      Order via WhatsApp
-                    </button>
-                  </div>
-
-                  <p className={`text-[10px] text-center ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                    OPay: full delivery tracking • WhatsApp: quick order via chat
-                  </p>
+            {/* Footer */}
+            {cart.length > 0 && (
+              <div className={`p-6 border-t ${isDark ? 'border-[#2A2A2A]' : 'border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-5">
+                  <span className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Subtotal</span>
+                  <span className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>₦{total.toLocaleString()}</span>
                 </div>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Checkout Modal */}
-      <CheckoutModal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
-    </>
+                <p className={`text-xs mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                  + delivery fee calculated at checkout based on your location
+                </p>
+                <button onClick={onCheckout}
+                  className="w-full py-4 bg-brand-orange hover:bg-brand-orange-light text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-orange/25 active:scale-95">
+                  Checkout <ArrowRight size={16}/>
+                </button>
+                <button onClick={onClose}
+                  className={`w-full mt-3 py-3 text-sm font-medium rounded-xl transition-all ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
+                  Continue Shopping
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   )
 }
