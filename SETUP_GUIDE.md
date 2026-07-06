@@ -413,3 +413,89 @@ acefit-v2/
 ---
 
 *AceFit v2 — Built with React + Vite + Supabase + Paystack + Resend*
+
+---
+
+## ⚠️ FIX: "Error sending confirmation email" (OTP Not Working)
+
+This error means **Supabase can't send the OTP email**. You need to connect Resend as your SMTP provider in Supabase.
+
+### Option A — Use Resend SMTP in Supabase (Recommended)
+
+1. Go to your **Supabase Dashboard**
+2. Click **Project Settings** (gear icon, bottom left)
+3. Click **Authentication** in the settings sidebar
+4. Scroll down to **SMTP Settings**
+5. Toggle **Enable Custom SMTP** → ON
+6. Fill in:
+
+| Field | Value |
+|---|---|
+| **Host** | `smtp.resend.com` |
+| **Port** | `465` |
+| **Username** | `resend` |
+| **Password** | Your Resend API key (the `re_xxx` key) |
+| **Sender email** | `AceFit <support@acefits.store>` (or your verified domain) |
+| **Sender name** | `AceFit` |
+
+7. Click **Save** at the bottom
+
+> ✅ After saving, try the OTP login again — it should work immediately.
+
+---
+
+### Option B — Use Resend SMTP via Environment (Simpler for local dev)
+
+Your `.env` already has `VITE_RESEND_API_KEY` — but note:
+- `VITE_RESEND_API_KEY` is frontend-only (for reference)
+- The **actual** Resend API key used for sending must be in **Supabase SMTP settings** (Option A above) AND as a **Supabase secret** for the edge function
+
+### What your `.env` should look like
+
+```env
+# ── Supabase ──────────────────────────────────────────────────
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGci...
+
+# ── Paystack ──────────────────────────────────────────────────
+VITE_PAYSTACK_PUBLIC_KEY=pk_live_your_key_here
+
+# ── Admin ─────────────────────────────────────────────────────
+VITE_ADMIN_EMAIL=admin@acefit.com
+VITE_ADMIN_PASSWORD=YourPassword@2026!
+
+# ── App URL ───────────────────────────────────────────────────
+VITE_APP_URL=http://localhost:5173   # dev
+# VITE_APP_URL=https://acefit.netlify.app  # production
+
+# NOTE: VITE_RESEND_API_KEY is NOT needed in .env
+# Set it in Supabase SMTP settings and as a Supabase secret instead
+```
+
+### Supabase Auth Email Template (Optional Cleanup)
+
+While you're in Supabase → Settings → Authentication → Email Templates, set the **OTP template** to something clean:
+
+**Subject:** `Your AceFit login code: {{ .Token }}`
+
+**Body:**
+```html
+<h2>Your AceFit Login Code</h2>
+<p>Your one-time code is: <strong style="font-size:32px;letter-spacing:8px">{{ .Token }}</strong></p>
+<p>Valid for 10 minutes. Do not share with anyone.</p>
+```
+
+---
+
+### Summary of what goes where
+
+| Key | Where |
+|---|---|
+| `VITE_SUPABASE_URL` | `.env` file + Netlify env vars |
+| `VITE_SUPABASE_ANON_KEY` | `.env` file + Netlify env vars |
+| `VITE_PAYSTACK_PUBLIC_KEY` | `.env` file + Netlify env vars |
+| `VITE_ADMIN_EMAIL` | `.env` file + Netlify env vars |
+| `VITE_ADMIN_PASSWORD` | `.env` file + Netlify env vars |
+| `RESEND_API_KEY` (re_xxx) | Supabase SMTP settings + `supabase secrets set` |
+| `PAYSTACK_SECRET_KEY` (sk_xxx) | `supabase secrets set` only (never in .env) |
+

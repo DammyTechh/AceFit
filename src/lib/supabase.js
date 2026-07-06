@@ -43,6 +43,47 @@ export const verifyPaystackPayment = async (reference) => {
   }
 }
 
+// ── Storage: ensure bucket exists before upload ──────────────
+export const BUCKET = 'acefit-media'
+
+export const ensureBucket = async () => {
+  // Try to get bucket info — if 404, create it
+  const { data, error } = await supabase.storage.getBucket(BUCKET)
+  if (!error) return { ok: true }
+
+  if (error.message?.includes('not found') || error.message?.includes('404') || error.statusCode === '404') {
+    const { error: createError } = await supabase.storage.createBucket(BUCKET, {
+      public: true,
+      fileSizeLimit: 10485760, // 10MB
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/jpg'],
+    })
+    if (createError) {
+      console.error('Could not create bucket:', createError.message)
+      return { ok: false, error: createError.message }
+    }
+    return { ok: true, created: true }
+  }
+  return { ok: false, error: error.message }
+}
+
+// ── Storage: upload file (auto-creates bucket if needed) ─────
+export const uploadFile = async (file, folder = 'products') => {
+  // Make sure bucket exists
+  await ensureBucket()
+
+  const ext  = file.name.split('.').pop().toLowerCase()
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    upsert: true,
+    contentType: file.type,
+  })
+  if (error) throw new Error(error.message)
+
+  const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return publicUrl
+}
+
 // ── Log email to DB ──────────────────────────────────────────
 export const logEmail = async ({ to, subject, template, resendId, error }) => {
   try {

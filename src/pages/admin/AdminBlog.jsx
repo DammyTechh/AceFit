@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Loader, Upload, Eye, EyeOff } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { supabase } from '../../lib/supabase'
+import { supabase, uploadFile } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const CATS = ['fitness','nutrition','lifestyle','products','news']
@@ -38,14 +38,13 @@ export default function AdminBlog() {
     if (!file) return
     setUploading(true)
     try {
-      const path = `blog/${Date.now()}.${file.name.split('.').pop()}`
-      const { error } = await supabase.storage.from('acefit-media').upload(path, file, { upsert: true })
-      if (error) throw error
-      const { data: { publicUrl } } = supabase.storage.from('acefit-media').getPublicUrl(path)
+      const publicUrl = await uploadFile(file, 'blog')
       setForm(f => ({ ...f, cover_image: publicUrl }))
       toast.success('Image uploaded!')
-    } catch (err) { toast.error('Upload failed: ' + err.message) }
-    finally { setUploading(false) }
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message)
+      console.error('Upload error:', err)
+    } finally { setUploading(false) }
   }
 
   const addTag = () => {

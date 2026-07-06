@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, Upload, X, Loader, Image as ImageIcon, ToggleLeft, ToggleRight } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { supabase, uploadFile } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const CATEGORIES = ['tshirts','joggers','hoodies','shorts','leggings','sports-bra','tank-tops','tracksuits','accessories','supplements','gainz']
@@ -50,15 +50,13 @@ export default function AdminProducts() {
     if (!file) return
     setUploading(true)
     try {
-      const ext  = file.name.split('.').pop()
-      const path = `products/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('acefit-media').upload(path, file, { upsert: true })
-      if (error) throw error
-      const { data: { publicUrl } } = supabase.storage.from('acefit-media').getPublicUrl(path)
+      const publicUrl = await uploadFile(file, 'products')
       setForm(f => ({ ...f, image_url: publicUrl }))
       toast.success('Image uploaded!')
-    } catch (err) { toast.error('Upload failed: ' + err.message) }
-    finally { setUploading(false) }
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message)
+      console.error('Upload error:', err)
+    } finally { setUploading(false) }
   }
 
   const toggleSize = (s) => setForm(f => ({

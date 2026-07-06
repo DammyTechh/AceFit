@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Loader, Upload, GripVertical } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { supabase } from '../../lib/supabase'
+import { supabase, uploadFile } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const EMPTY = { title:'', subtitle:'', badge:'New Collection', image_url:'', cta_text:'Shop Now', cta_link:'/', tagline:'', sort_order:0, is_active:true, product_id:null }
@@ -34,13 +34,13 @@ export default function AdminHero() {
     if (!file) return
     setUploading(true)
     try {
-      const path = `hero/${Date.now()}.${file.name.split('.').pop()}`
-      await supabase.storage.from('acefit-media').upload(path, file, { upsert: true })
-      const { data: { publicUrl } } = supabase.storage.from('acefit-media').getPublicUrl(path)
+      const publicUrl = await uploadFile(file, 'hero')
       setForm(f => ({ ...f, image_url: publicUrl }))
       toast.success('Image uploaded!')
-    } catch (err) { toast.error('Upload failed: ' + err.message) }
-    finally { setUploading(false) }
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message)
+      console.error('Upload error:', err)
+    } finally { setUploading(false) }
   }
 
   const handleSave = async () => {

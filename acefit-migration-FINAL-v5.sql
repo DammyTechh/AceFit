@@ -437,3 +437,40 @@ $$;
 --   4. Set secret: supabase secrets set RESEND_API_KEY=re_xxx
 --   5. Set secret: supabase secrets set PAYSTACK_SECRET_KEY=sk_xxx
 -- ============================================================
+
+-- ============================================================
+-- STORAGE BUCKET (auto-create acefit-media)
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'acefit-media',
+  'acefit-media',
+  true,
+  10485760,
+  ARRAY['image/jpeg','image/jpg','image/png','image/webp','image/gif']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 10485760;
+
+-- Storage policies (allow public read + authenticated upload)
+DROP POLICY IF EXISTS "acefit_media_public_read"   ON storage.objects;
+DROP POLICY IF EXISTS "acefit_media_auth_upload"   ON storage.objects;
+DROP POLICY IF EXISTS "acefit_media_auth_update"   ON storage.objects;
+DROP POLICY IF EXISTS "acefit_media_auth_delete"   ON storage.objects;
+
+CREATE POLICY "acefit_media_public_read"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'acefit-media');
+
+CREATE POLICY "acefit_media_auth_upload"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'acefit-media');
+
+CREATE POLICY "acefit_media_auth_update"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'acefit-media');
+
+CREATE POLICY "acefit_media_auth_delete"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'acefit-media');
