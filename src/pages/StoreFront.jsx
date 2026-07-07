@@ -12,6 +12,8 @@ import AuthModal from '../components/AuthModal'
 import SupportChatbot from '../components/SupportChatbot'
 import FeedbackSection from '../components/FeedbackSection'
 import CategoriesSection from '../components/CategoriesSection'
+import BannerSection from '../components/BannerSection'
+import { colorToHex, previewImageFor, tintOverlayStyle } from '../lib/colors'
 import toast from 'react-hot-toast'
 
 const COLLECTIONS = [
@@ -35,6 +37,9 @@ function ProductCard({ product, onAddToCart, onQuickView }) {
   const wishlisted = isWishlisted(product.id)
   const isDark = theme === 'dark'
   const discount = product.original_price ? Math.round((1 - product.price / product.original_price) * 100) : 0
+  const [activeColor, setActiveColor] = useState(null)
+  const cardImg = previewImageFor(product, activeColor)
+  const cardTint = tintOverlayStyle(product, activeColor)
 
   return (
     <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -43,8 +48,11 @@ function ProductCard({ product, onAddToCart, onQuickView }) {
 
       {/* Image */}
       <div className="relative aspect-[3/4] overflow-hidden">
-        {product.image_url
-          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+        {cardImg
+          ? <>
+              <img src={cardImg} alt={product.name} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+              {cardTint && <div className="absolute inset-0" style={cardTint}/>}
+            </>
           : <div className={`w-full h-full flex items-center justify-center ${isDark ? 'bg-[#1A1A1A]' : 'bg-gray-100'}`}><ShoppingBag size={40} className="text-brand-orange/40"/></div>}
 
         {/* Overlay actions */}
@@ -77,13 +85,14 @@ function ProductCard({ product, onAddToCart, onQuickView }) {
         <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{product.collection}</p>
         <h3 className={`font-semibold text-sm mb-2 line-clamp-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{product.name}</h3>
 
-        {/* Colors */}
+        {/* Colors — tap a swatch to preview that color on the item */}
         {product.colors?.length > 0 && (
-          <div className="flex gap-1 mb-2">
+          <div className="flex items-center gap-1.5 mb-2">
             {product.colors.slice(0, 5).map(c => (
-              <div key={c} title={c}
-                className="w-4 h-4 rounded-full border-2 border-white/20 shadow-sm"
-                style={{ backgroundColor: c.toLowerCase() === 'black' ? '#000' : c.toLowerCase() === 'white' ? '#fff' : c.toLowerCase() === 'red' ? '#ef4444' : c.toLowerCase() === 'blue' ? '#3b82f6' : c.toLowerCase() === 'green' ? '#22c55e' : c.toLowerCase() === 'yellow' ? '#eab308' : c.toLowerCase() === 'orange' ? '#f97316' : c.toLowerCase() === 'purple' ? '#a855f7' : c.toLowerCase() === 'pink' ? '#ec4899' : c.toLowerCase() === 'gray' || c.toLowerCase() === 'grey' ? '#6b7280' : '#888' }}/>
+              <button key={c} type="button" title={c} aria-label={`Preview ${c}`}
+                onClick={e => { e.stopPropagation(); setActiveColor(prev => prev === c ? null : c) }}
+                className={`w-5 h-5 rounded-full border-2 shadow-sm transition-all ${activeColor === c ? 'border-brand-orange scale-110' : 'border-white/20 hover:scale-110'}`}
+                style={{ backgroundColor: colorToHex(c) }}/>
             ))}
             {product.colors.length > 5 && <span className="text-[10px] text-gray-400">+{product.colors.length - 5}</span>}
           </div>
@@ -146,12 +155,15 @@ function QuickViewModal({ product, open, onClose }) {
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-        className={`max-w-2xl w-full rounded-2xl overflow-hidden ${isDark ? 'bg-[#141414]' : 'bg-white'}`}>
+        className={`max-w-2xl w-full max-h-[90dvh] overflow-y-auto rounded-2xl ${isDark ? 'bg-[#141414]' : 'bg-white'}`}>
         <div className="grid md:grid-cols-2">
-          {/* Image */}
-          <div className="aspect-square overflow-hidden relative">
-            {product.image_url
-              ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover"/>
+          {/* Image — reflects the selected color */}
+          <div className="aspect-[4/3] md:aspect-square overflow-hidden relative">
+            {previewImageFor(product, selectedColor)
+              ? <>
+                  <img src={previewImageFor(product, selectedColor)} alt={product.name} className="w-full h-full object-cover"/>
+                  {tintOverlayStyle(product, selectedColor) && <div className="absolute inset-0" style={tintOverlayStyle(product, selectedColor)}/>}
+                </>
               : <div className={`w-full h-full flex items-center justify-center ${isDark ? 'bg-[#1A1A1A]' : 'bg-gray-100'}`}><ShoppingBag size={48} className="text-brand-orange/30"/></div>}
             {product.is_new && <span className="absolute top-3 left-3 px-2 py-1 bg-brand-orange text-white text-[10px] font-bold rounded-lg">NEW</span>}
           </div>
@@ -174,9 +186,9 @@ function QuickViewModal({ product, open, onClose }) {
                 <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Color: <span className="text-brand-orange">{selectedColor}</span></p>
                 <div className="flex gap-2 flex-wrap">
                   {product.colors.map(c => (
-                    <button key={c} onClick={() => setSelectedColor(c)} title={c}
+                    <button key={c} onClick={() => setSelectedColor(c)} title={c} aria-label={`Select ${c}`}
                       className={`w-7 h-7 rounded-full border-2 transition-all ${selectedColor === c ? 'border-brand-orange scale-110 shadow-lg shadow-brand-orange/30' : 'border-transparent hover:border-gray-400'}`}
-                      style={{ backgroundColor: c.toLowerCase() === 'black' ? '#111' : c.toLowerCase() === 'white' ? '#f5f5f5' : c.toLowerCase() === 'red' ? '#ef4444' : c.toLowerCase() === 'blue' ? '#3b82f6' : c.toLowerCase() === 'green' ? '#22c55e' : c.toLowerCase() === 'yellow' ? '#eab308' : c.toLowerCase() === 'orange' ? '#f97316' : c.toLowerCase() === 'purple' ? '#a855f7' : c.toLowerCase() === 'pink' ? '#ec4899' : '#888' }}/>
+                      style={{ backgroundColor: colorToHex(c) }}/>
                   ))}
                 </div>
               </div>
@@ -385,6 +397,9 @@ export default function StoreFront() {
           </motion.div>
         )}
       </section>
+
+      {/* Promo banners — managed by admin (/admin/banners) */}
+      <BannerSection/>
 
       {/* Categories */}
       <CategoriesSection onSelect={scrollToShop}/>

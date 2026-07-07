@@ -4,6 +4,7 @@ import { X, MapPin, User, Phone, Mail, Loader, CheckCircle, ChevronDown, Package
 import { useStore } from '../lib/store'
 import { supabase, sendEmail, verifyPaystackPayment } from '../lib/supabase'
 import { getDeliveryFee, getDeliveryZones, ALL_NIGERIAN_STATES } from '../lib/deliveryFee'
+import { FEZ_ENABLED, getFezQuote } from '../lib/fezDelivery'
 import { emailTemplates } from '../lib/emailTemplates'
 import { initPaystack, generateReference } from '../lib/paystack'
 import toast from 'react-hot-toast'
@@ -53,7 +54,22 @@ export default function CheckoutModal({ open, onClose }) {
 
   useEffect(() => {
     const fullAddr = [form.address, form.lga, form.state].filter(Boolean).join(', ')
-    if (fullAddr.length > 3) setDelivery(getDeliveryFee(fullAddr, subtotal, zones))
+    if (fullAddr.length <= 3) return
+    // 1) Zone-based fee (always the baseline / fallback)
+    const zoneFee = getDeliveryFee(fullAddr, subtotal, zones)
+    setDelivery(zoneFee)
+
+    // 2) Optional live quote from Fez (only if enabled and not already free)
+    if (FEZ_ENABLED && form.state && zoneFee.fee > 0) {
+      let cancelled = false
+      getFezQuote({ state: form.state, address: fullAddr, valueOfItem: subtotal })
+        .then(r => {
+          if (!cancelled && r.ok) {
+            setDelivery(d => ({ ...d, fee: r.fee, label: 'Delivery (live rate)' }))
+          }
+        })
+      return () => { cancelled = true }
+    }
   }, [form.address, form.state, form.lga, subtotal, zones])
 
   const total = subtotal + delivery.fee
@@ -162,7 +178,7 @@ export default function CheckoutModal({ open, onClose }) {
         onClick={e => { if (e.target === e.currentTarget && step !== 'success') onClose() }}>
 
         <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className={`relative h-full w-full max-w-lg flex flex-col ${isDark ? 'bg-[#0F0F0F]' : 'bg-white'}`}>
+          className={`relative h-[100dvh] max-h-[100dvh] w-full max-w-lg flex flex-col ${isDark ? 'bg-[#0F0F0F]' : 'bg-white'}`}>
 
           {/* Header */}
           <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-[#2A2A2A]' : 'border-gray-200'}`}>

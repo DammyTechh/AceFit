@@ -17,7 +17,7 @@ export default function CartSidebar({ open, onClose, onCheckout }) {
 
           <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed top-0 right-0 h-full w-full max-w-sm z-[110] flex flex-col ${isDark ? 'bg-[#0F0F0F]' : 'bg-white'}`}>
+            className={`fixed top-0 right-0 h-[100dvh] max-h-[100dvh] w-full max-w-sm z-[110] flex flex-col ${isDark ? 'bg-[#0F0F0F]' : 'bg-white'}`}>
 
             {/* Header */}
             <div className={`flex items-center justify-between p-6 border-b ${isDark ? 'border-[#2A2A2A]' : 'border-gray-200'}`}>

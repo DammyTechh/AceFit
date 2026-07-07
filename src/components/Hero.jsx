@@ -32,9 +32,39 @@ export default function Hero({ onShopNow }) {
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
-    supabase.from('hero_slides').select('*').eq('is_active', true).order('sort_order')
-      .then(({ data }) => { if (data?.length) setSlides(data) })
-      .catch(() => {})
+    // Build the carousel from two sources:
+    //  1) manual hero_slides (curated by admin)
+    //  2) products flagged "Featured in Hero" (is_featured) or new (is_new)
+    // so newly uploaded products show up in the hero automatically.
+    const load = async () => {
+      const [{ data: manual }, { data: prods }] = await Promise.all([
+        supabase.from('hero_slides').select('*').eq('is_active', true).order('sort_order'),
+        supabase.from('products').select('*')
+          .eq('is_active', true)
+          .or('is_featured.eq.true,is_new.eq.true')
+          .not('collection', 'in', '(supplements,gainz)')
+          .order('is_featured', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(6),
+      ])
+
+      const productSlides = (prods || [])
+        .filter(p => p.image_url)
+        .map(p => ({
+          id: `product-${p.id}`,
+          badge: p.is_new ? 'New Arrival' : 'Featured',
+          title: p.name,
+          subtitle: '',
+          tagline: p.description || 'Just dropped — shop the latest AceFit gear.',
+          image_url: p.image_url,
+          cta_text: 'Shop Now',
+          product_price: p.price,
+        }))
+
+      const merged = [...(manual || []), ...productSlides]
+      if (merged.length) setSlides(merged)
+    }
+    load().catch(() => {})
   }, [])
 
   // Auto-advance

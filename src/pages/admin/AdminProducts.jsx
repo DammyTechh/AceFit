@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, Upload, X, Loader, Image as ImageIcon, ToggleLeft, ToggleRight } from 'lucide-react'
 import { supabase, uploadFile } from '../../lib/supabase'
+import { colorToHex } from '../../lib/colors'
 import toast from 'react-hot-toast'
 
 const CATEGORIES = ['tshirts','joggers','hoodies','shorts','leggings','sports-bra','tank-tops','tracksuits','accessories','supplements','gainz']
@@ -9,7 +10,7 @@ const COLLECTIONS = ['men','women','accessories','tracksuits','supplements','gai
 const GENDERS     = ['men','women','unisex']
 const SIZES_DEFAULT = ['XS','S','M','L','XL','XXL']
 
-const EMPTY = { name:'', description:'', price:'', original_price:'', category:'tshirts', gender:'unisex', collection:'general', sizes:['S','M','L','XL'], colors:[], image_url:'', stock:'', is_new:false, is_bestseller:false, is_active:true, is_featured:false, sort_order:0 }
+const EMPTY = { name:'', description:'', price:'', original_price:'', category:'tshirts', gender:'unisex', collection:'general', sizes:['S','M','L','XL'], colors:[], color_images:{}, image_url:'', stock:'', is_new:false, is_bestseller:false, is_active:true, is_featured:false, sort_order:0 }
 
 const inp = `w-full px-3 py-2.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl text-white text-sm outline-none focus:border-brand-orange placeholder-gray-600`
 
@@ -42,7 +43,7 @@ export default function AdminProducts() {
   })
 
   const openNew = () => { setForm(EMPTY); setEditing(null); setModalOpen(true); setColorInput('') }
-  const openEdit = (p) => { setForm({ ...EMPTY, ...p, sizes: p.sizes || [], colors: p.colors || [] }); setEditing(p.id); setModalOpen(true); setColorInput('') }
+  const openEdit = (p) => { setForm({ ...EMPTY, ...p, sizes: p.sizes || [], colors: p.colors || [], color_images: p.color_images || {} }); setEditing(p.id); setModalOpen(true); setColorInput('') }
   const closeModal = () => { setModalOpen(false); setEditing(null); setForm(EMPTY) }
 
   const handleUpload = async (e) => {
@@ -68,7 +69,25 @@ export default function AdminProducts() {
     setForm(f => ({ ...f, colors: [...(f.colors||[]), colorInput.trim()] }))
     setColorInput('')
   }
-  const removeColor = (c) => setForm(f => ({ ...f, colors: f.colors.filter(x => x !== c) }))
+  const removeColor = (c) => setForm(f => {
+    const ci = { ...(f.color_images || {}) }
+    delete ci[c]
+    return { ...f, colors: f.colors.filter(x => x !== c), color_images: ci }
+  })
+
+  // Upload a preview image for a specific color
+  const [colorUploading, setColorUploading] = useState(null)
+  const handleColorImage = async (color, file) => {
+    if (!file) return
+    setColorUploading(color)
+    try {
+      const url = await uploadFile(file, 'products/colors')
+      setForm(f => ({ ...f, color_images: { ...(f.color_images || {}), [color]: url } }))
+      toast.success(`${color} image added`)
+    } catch (err) {
+      toast.error('Upload failed: ' + err.message)
+    } finally { setColorUploading(null) }
+  }
 
   const handleSave = async () => {
     if (!form.name || !form.price) return toast.error('Name and price are required')
@@ -197,7 +216,7 @@ export default function AdminProducts() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)' }}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#141414] border border-[#2A2A2A] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              className="bg-[#141414] border border-[#2A2A2A] rounded-2xl w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
                 <h2 className="text-white font-bold text-lg">{editing ? 'Edit Product' : 'New Product'}</h2>
                 <button onClick={closeModal} className="p-2 text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-all"><X size={18}/></button>
@@ -284,13 +303,26 @@ export default function AdminProducts() {
                       placeholder="e.g. Black, Red…" className={`${inp} flex-1`}/>
                     <button type="button" onClick={addColor} className="px-4 py-2.5 bg-brand-orange text-white rounded-xl text-sm font-semibold hover:bg-orange-500">Add</button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(form.colors || []).map(c => (
-                      <span key={c} className="flex items-center gap-1 px-3 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-xs text-gray-300">
-                        {c} <button type="button" onClick={() => removeColor(c)} className="text-gray-500 hover:text-red-400 ml-1"><X size={10}/></button>
-                      </span>
-                    ))}
+                  <div className="space-y-2">
+                    {(form.colors || []).map(c => {
+                      const img = form.color_images?.[c]
+                      return (
+                        <div key={c} className="flex items-center gap-3 px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl">
+                          <span className="w-5 h-5 rounded-full border border-white/20 shrink-0" style={{ backgroundColor: colorToHex(c) }}/>
+                          <span className="text-sm text-gray-300 flex-1">{c}</span>
+                          {img && <img src={img} alt={c} className="w-9 h-9 rounded-lg object-cover border border-[#2A2A2A]"/>}
+                          <label className="cursor-pointer px-2.5 py-1.5 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg text-xs text-gray-300 hover:border-brand-orange transition-all flex items-center gap-1.5">
+                            {colorUploading === c ? <Loader size={12} className="animate-spin"/> : <Upload size={12}/>}
+                            {img ? 'Replace' : 'Image'}
+                            <input type="file" accept="image/*" className="hidden"
+                              onChange={e => handleColorImage(c, e.target.files?.[0])}/>
+                          </label>
+                          <button type="button" onClick={() => removeColor(c)} className="text-gray-500 hover:text-red-400"><X size={14}/></button>
+                        </div>
+                      )
+                    })}
                   </div>
+                  <p className="text-gray-600 text-xs mt-2">Tip: upload a photo of the item in each color so customers see the exact color when they tap it. No image? The store tints the main photo toward that color automatically.</p>
                 </div>
 
                 {/* Flags */}
