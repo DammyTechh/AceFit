@@ -14,6 +14,7 @@ import FeedbackSection from '../components/FeedbackSection'
 import CategoriesSection from '../components/CategoriesSection'
 import BannerSection from '../components/BannerSection'
 import { colorToHex, previewImageFor, tintOverlayStyle } from '../lib/colors'
+import { FaWhatsapp, FaInstagram, FaEnvelope } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 
 const COLLECTIONS = [
@@ -424,7 +425,7 @@ export default function StoreFront() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {[['2K+', 'Happy Customers'], ['50+', 'Products'], ['5⭐', 'Average Rating'], ['🚚', 'Nationwide Delivery']].map(([v, l]) => (
+              {[['2K+', 'Happy Customers'], ['50+', 'Products'], ['5.0', 'Average Rating'], ['36', 'States Covered']].map(([v, l]) => (
                 <div key={l} className={`p-6 rounded-2xl border text-center ${isDark ? 'bg-[#141414] border-[#2A2A2A]' : 'bg-white border-gray-200'}`}>
                   <p className="text-3xl font-bold text-brand-orange mb-1">{v}</p>
                   <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{l}</p>
@@ -443,19 +444,19 @@ export default function StoreFront() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer"
               className="flex flex-col items-center gap-2 p-6 bg-green-500/10 border border-green-500/20 rounded-2xl hover:bg-green-500/20 transition-all">
-              <span className="text-3xl">💬</span>
+              <FaWhatsapp className="text-4xl text-[#25D366]"/>
               <span className="text-green-400 font-bold text-sm">WhatsApp</span>
               <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>07025692097</span>
             </a>
             <a href="mailto:acefitandgainz@gmail.com"
               className={`flex flex-col items-center gap-2 p-6 rounded-2xl border hover:bg-brand-orange/5 transition-all ${isDark ? 'bg-[#141414] border-[#2A2A2A]' : 'bg-white border-gray-200'}`}>
-              <span className="text-3xl">📧</span>
+              <FaEnvelope className="text-4xl text-brand-orange"/>
               <span className="text-brand-orange font-bold text-sm">Email</span>
               <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} break-all`}>acefitandgainz@gmail.com</span>
             </a>
             <a href="https://instagram.com/acefit.shop" target="_blank" rel="noreferrer"
               className={`flex flex-col items-center gap-2 p-6 rounded-2xl border hover:bg-pink-500/5 transition-all ${isDark ? 'bg-[#141414] border-[#2A2A2A]' : 'bg-white border-gray-200'}`}>
-              <span className="text-3xl">📸</span>
+              <FaInstagram className="text-4xl" style={{ color: '#DD2A7B' }}/>
               <span className="text-pink-400 font-bold text-sm">Instagram</span>
               <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>@acefit.shop</span>
             </a>

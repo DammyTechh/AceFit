@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, User, Phone, Mail, Loader, CheckCircle, ChevronDown, Package, ArrowRight, CreditCard } from 'lucide-react'
+import { X, MapPin, User, Phone, Mail, Loader, CheckCircle, ChevronDown, Package, ArrowRight, CreditCard, ShieldCheck } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { supabase, sendEmail, verifyPaystackPayment } from '../lib/supabase'
 import { getDeliveryFee, getDeliveryZones, ALL_NIGERIAN_STATES } from '../lib/deliveryFee'
@@ -299,8 +299,8 @@ export default function CheckoutModal({ open, onClose }) {
                   : <><CreditCard size={18}/> Pay ₦{total.toLocaleString()} with Paystack</>
                 }
               </button>
-              <p className={`text-center text-xs mt-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                🔒 Secured by Paystack · Card, Bank Transfer, USSD
+              <p className={`flex items-center justify-center gap-1.5 text-center text-xs mt-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                <ShieldCheck size={13} className="text-green-500"/> Secured by Paystack · Card, Bank Transfer, USSD
               </p>
             </div>
           )}

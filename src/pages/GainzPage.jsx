@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ShoppingBag, Star, Zap, Filter } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../lib/store'
 import Navbar from '../components/Navbar'
@@ -68,7 +69,7 @@ export default function GainzPage() {
             <p className={`${isDark ? 'text-gray-400' : 'text-gray-500'}`}>AceGainz supplements launching soon. Stay tuned!</p>
             <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer"
               className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-brand-orange text-white rounded-xl font-semibold hover:bg-brand-orange-light transition-all">
-              Get Notified on WhatsApp
+              <FaWhatsapp size={18}/> Get Notified on WhatsApp
             </a>
           </div>
         ) : (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Heart, Star, Check, MessageCircle, Minus, Plus } from 'lucide-react'
+import { X, ShoppingBag, Heart, Star, Check, Minus, Plus } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { useStore } from '../lib/store'
 import { getPlaceholder } from '../lib/placeholders'
 import toast from 'react-hot-toast'
@@ -132,7 +133,7 @@ export default function QuickViewModal({ product, onClose }) {
                     onClick={handleWhatsApp}
                     className="py-3 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl flex items-center justify-center gap-1.5 text-sm transition-all btn-press"
                   >
-                    <MessageCircle size={14} /> WhatsApp
+                    <FaWhatsapp size={15}/> WhatsApp
                   </button>
                   <button
                     onClick={() => { toggleWishlist(product); toast(wishlisted ? 'Removed from wishlist' : 'Added to wishlist ❤️') }}

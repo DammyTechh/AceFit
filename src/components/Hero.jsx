@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Zap, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
@@ -120,7 +121,7 @@ export default function Hero({ onShopNow }) {
               </button>
               <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer"
                 className={`flex items-center gap-2.5 px-8 py-4 border-2 font-bold rounded-2xl transition-all text-sm active:scale-95 ${isDark ? 'border-[#2A2A2A] text-gray-300 hover:border-brand-orange hover:text-brand-orange' : 'border-gray-300 text-gray-700 hover:border-brand-orange hover:text-brand-orange'}`}>
-                WhatsApp Order
+                <FaWhatsapp size={18} className="text-[#25D366]"/> WhatsApp Order
               </a>
             </motion.div>
 

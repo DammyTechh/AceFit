@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Package, Truck, CheckCircle, Clock, XCircle,
   MapPin, Phone, Mail, ChevronDown, ChevronUp,
-  RefreshCw, MessageCircle, ArrowLeft, ShoppingBag,
+  RefreshCw, ArrowLeft, ShoppingBag,
   Search, Copy, Star, Navigation, Box, Zap
 } from 'lucide-react'
+import { FaWhatsapp } from 'react-icons/fa'
 import { useStore } from '../lib/store'
 import { getPlaceholder } from '../lib/placeholders'
 import { supabase } from '../lib/supabase'
@@ -364,7 +365,7 @@ function OrderCard({ order, isDark, defaultOpen }) {
                   rel="noreferrer"
                   className="flex items-center gap-1.5 px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-xl transition-all btn-press"
                 >
-                  <MessageCircle size={13} /> WhatsApp Support
+                  <FaWhatsapp size={14} /> WhatsApp Support
                 </a>
                 {order.status === 'delivered' && (
                   <Link

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Instagram, MessageCircle } from 'lucide-react'
+import { FaInstagram, FaTiktok, FaSnapchatGhost, FaWhatsapp } from 'react-icons/fa'
+import { ShieldCheck, Truck } from 'lucide-react'
 import { useStore } from '../lib/store'
 
 export default function Footer() {
@@ -18,21 +19,22 @@ export default function Footer() {
               Premium fitness wear engineered for peak performance. Train harder, look better.
             </p>
             <div className="flex gap-3">
-              <a href="https://instagram.com/acefit.shop" target="_blank" rel="noreferrer"
-                className="w-9 h-9 bg-brand-orange/10 hover:bg-brand-orange text-brand-orange hover:text-white rounded-xl flex items-center justify-center transition-all">
-                <Instagram size={16}/>
+              <a href="https://instagram.com/acefit.shop" target="_blank" rel="noreferrer" aria-label="Instagram"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-white transition-transform hover:scale-110"
+                style={{ background: 'linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)' }}>
+                <FaInstagram size={18}/>
               </a>
-              <a href="https://tiktok.com/@the_acefit" target="_blank" rel="noreferrer"
-                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all text-sm font-bold ${isDark ? 'bg-[#1A1A1A] hover:bg-white text-gray-400 hover:text-black' : 'bg-gray-200 hover:bg-black text-gray-600 hover:text-white'}`}>
-                TT
+              <a href="https://tiktok.com/@the_acefit" target="_blank" rel="noreferrer" aria-label="TikTok"
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-black text-white transition-transform hover:scale-110 border border-white/10">
+                <FaTiktok size={16}/>
               </a>
-              <a href="https://snapchat.com/add/acefit_official" target="_blank" rel="noreferrer"
-                className="w-9 h-9 bg-yellow-400/10 hover:bg-yellow-400 text-yellow-400 hover:text-black rounded-xl flex items-center justify-center transition-all text-sm font-bold">
-                SC
+              <a href="https://snapchat.com/add/acefit_official" target="_blank" rel="noreferrer" aria-label="Snapchat"
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#FFFC00] text-black transition-transform hover:scale-110">
+                <FaSnapchatGhost size={18}/>
               </a>
-              <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer"
-                className="w-9 h-9 bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white rounded-xl flex items-center justify-center transition-all">
-                <MessageCircle size={16}/>
+              <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer" aria-label="WhatsApp"
+                className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#25D366] text-white transition-transform hover:scale-110">
+                <FaWhatsapp size={18}/>
               </a>
             </div>
           </div>
@@ -67,7 +69,7 @@ export default function Footer() {
               <li className="pt-2">
                 <a href="https://wa.me/2347025692097" target="_blank" rel="noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs font-bold rounded-xl hover:bg-green-400 transition-all">
-                  <MessageCircle size={12}/> WhatsApp Order
+                  <FaWhatsapp size={14}/> WhatsApp Order
                 </a>
               </li>
             </ul>
@@ -77,8 +79,8 @@ export default function Footer() {
         <div className={`pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-[#1A1A1A]' : 'border-gray-200'}`}>
           <p className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>© {new Date().getFullYear()} AceFit. All rights reserved. Premium Fitness Wear Nigeria.</p>
           <div className="flex items-center gap-4">
-            <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>🔒 Secured by Paystack</span>
-            <span className={`text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>🚚 Nationwide Delivery</span>
+            <span className={`inline-flex items-center gap-1.5 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}><ShieldCheck size={14} className="text-green-500"/> Secured by Paystack</span>
+            <span className={`inline-flex items-center gap-1.5 text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}><Truck size={14} className="text-brand-orange"/> Nationwide Delivery</span>
           </div>
         </div>
       </div>
