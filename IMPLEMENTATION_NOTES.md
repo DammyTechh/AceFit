@@ -62,5 +62,33 @@ The `/order` endpoint (create delivery) is documented and stable; confirm the
 cost/quote path with Fez before relying on live quotes.
 
 ## Run the migration
-In Supabase → SQL Editor, run `acefit-migration-v6-banners-colors.sql`.
-It's idempotent and safe on your existing v5 database.
+In Supabase → SQL Editor, run `acefit-migration-v7-FINAL.sql` (it replaces v6 and
+also adds the editable category cards). It's idempotent and safe on your v5 database.
+
+---
+
+# Follow-up update (screenshot feedback)
+
+### Hero image on mobile
+The hero's product image was `hidden lg:block` (desktop only). Added a mobile
+image + slide dots that show under the headline on phones. File: `Hero.jsx`.
+
+### Color change "not effective"
+This is expected when a color has no photo — the store can only *tint* the main
+image, which looks weak on real fabric. For a true color change, **upload one
+image per color**: Admin → Products → edit product → Colors → the **Image** button
+on each color row. Then tapping that color on the storefront shows the exact photo.
+Two things must be true for it to work: (1) run migration v7 so `color_images`
+exists, (2) upload a photo per color. Without a photo it falls back to the tint.
+
+### The "banner" = category cards ("FIND YOUR FIT")
+Those four cards were hardcoded images. They're now editable in admin:
+**Admin → Category Cards** (`/admin/categories`) — upload an image, edit the
+label/subtitle, toggle visibility, Save. The homepage reads from there and falls
+back to defaults if unset. Files: `CategoriesSection.jsx` (now DB-driven, also
+fixed a bug where category clicks did nothing), `AdminCategories.jsx` (new),
+`site_categories` table (migration v7).
+
+> The separate promo `Banners` section (below the product grid) is still available
+> if you want it, but it's empty/hidden by default now — the category cards are the
+> thing from your screenshot.

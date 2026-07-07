@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Package, ShoppingBag, MessageSquare, Users,
   Star, Settings, BookOpen, Truck, CreditCard, Image, Menu, X,
-  LogOut, ChevronRight, Bell, Pill, GalleryHorizontalEnd
+  LogOut, ChevronRight, Bell, Pill, GalleryHorizontalEnd, LayoutGrid
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -19,6 +19,7 @@ const NAV = [
   { to: '/admin/blog',      label: 'Blog',         icon: BookOpen },
   { to: '/admin/hero',      label: 'Hero Slides',  icon: Image },
   { to: '/admin/banners',   label: 'Banners',      icon: GalleryHorizontalEnd },
+  { to: '/admin/categories', label: 'Category Cards', icon: LayoutGrid },
   { to: '/admin/delivery',  label: 'Delivery Zones', icon: Truck },
   { to: '/admin/settings',  label: 'Settings',     icon: Settings },
 ]

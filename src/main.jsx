@@ -23,6 +23,7 @@ import AdminDelivery     from './pages/admin/AdminDelivery'
 import AdminPayments     from './pages/admin/AdminPayments'
 import AdminHero         from './pages/admin/AdminHero'
 import AdminBanners      from './pages/admin/AdminBanners'
+import AdminCategories   from './pages/admin/AdminCategories'
 
 function App() {
   const { theme } = useStore()
@@ -51,6 +52,7 @@ function App() {
             <Route path="payments"   element={<AdminPayments />} />
             <Route path="hero"       element={<AdminHero />} />
             <Route path="banners"    element={<AdminBanners />} />
+            <Route path="categories" element={<AdminCategories />} />
           </Route>
         </Routes>
       </BrowserRouter>

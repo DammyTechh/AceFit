@@ -135,6 +135,34 @@ export default function Hero({ onShopNow }) {
           </motion.div>
         </AnimatePresence>
 
+        {/* Mobile – Product Image (desktop version is the decorated block below) */}
+        {slide.image_url && (
+          <div className="lg:hidden mt-8">
+            <AnimatePresence mode="wait">
+              <motion.div key={slide.id + '-mobile'}
+                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="relative w-full max-w-xs mx-auto rounded-3xl overflow-hidden shadow-2xl shadow-black/40">
+                <img src={slide.image_url} alt="AceFit" className="w-full h-72 sm:h-80 object-cover object-top"/>
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                  <p className="text-white font-bold">{slide.title} {slide.subtitle}</p>
+                  {slide.product_price && <p className="text-brand-orange font-bold">₦{Number(slide.product_price).toLocaleString()}</p>}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+            {slides.length > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-5">
+                <button onClick={prev} aria-label="Previous slide" className="p-1.5 rounded-full bg-brand-orange/20 hover:bg-brand-orange/40 text-brand-orange transition-all"><ChevronLeft size={14}/></button>
+                {slides.map((_, i) => (
+                  <button key={i} onClick={() => setCurrent(i)} aria-label={`Go to slide ${i + 1}`}
+                    className={`w-2 h-2 rounded-full transition-all ${i === current ? 'bg-brand-orange scale-125' : 'bg-brand-orange/30'}`}/>
+                ))}
+                <button onClick={next} aria-label="Next slide" className="p-1.5 rounded-full bg-brand-orange/20 hover:bg-brand-orange/40 text-brand-orange transition-all"><ChevronRight size={14}/></button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Right – Product Image */}
         <motion.div initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.3 }}
           className="relative h-[500px] lg:h-[580px] hidden lg:block">
