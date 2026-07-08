@@ -6,10 +6,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const RESEND_API_KEY      = Deno.env.get("RESEND_API_KEY") || ""
 const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") || ""
-const ADMIN_EMAIL         = "acefitandgainz@gmail.com"
 
-// Until you verify a domain in Resend use onboarding@resend.dev
-// Once acefit.com is verified, change to: AceFit <noreply@acefit.com>
+// Change FROM_EMAIL once your domain is verified in Resend
+// Until then onboarding@resend.dev works for all transactional emails
 const FROM_EMAIL = "AceFit <onboarding@resend.dev>"
 
 const CORS = {
@@ -23,9 +22,8 @@ const json = (data: unknown, status = 200) =>
     headers: { "Content-Type": "application/json", ...CORS },
   })
 
-// ── Send via Resend ──────────────────────────────────────────
 async function sendEmail(to: string | string[], subject: string, html: string, replyTo?: string) {
-  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set")
+  if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set — run: supabase secrets set RESEND_API_KEY=re_xxx")
   const payload: Record<string, unknown> = {
     from: FROM_EMAIL,
     to: Array.isArray(to) ? to : [to],
@@ -33,7 +31,6 @@ async function sendEmail(to: string | string[], subject: string, html: string, r
     html,
   }
   if (replyTo) payload.reply_to = replyTo
-
   const res  = await fetch("https://api.resend.com/emails", {
     method:  "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
@@ -44,7 +41,6 @@ async function sendEmail(to: string | string[], subject: string, html: string, r
   return data
 }
 
-// ── Verify Paystack payment ──────────────────────────────────
 async function verifyPaystack(reference: string) {
   if (!PAYSTACK_SECRET_KEY) throw new Error("PAYSTACK_SECRET_KEY not set")
   const res  = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
@@ -59,11 +55,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
 
   try {
-    const url      = new URL(req.url)
-    const action   = url.searchParams.get("action") || "send-email"
-    const body     = req.method === "POST" ? await req.json() : {}
+    const body = req.method === "POST" ? await req.json() : {}
 
-    // ── Route: verify-payment ──────────────────────────────
+    // Action can come from URL query param OR request body
+    const url    = new URL(req.url)
+    const action = url.searchParams.get("action") || body.action || "send-email"
+
     if (action === "verify-payment") {
       const { reference } = body
       if (!reference) return json({ error: "reference required" }, 400)
@@ -71,7 +68,7 @@ serve(async (req) => {
       return json({ success: true, data: tx })
     }
 
-    // ── Route: send-email (default) ────────────────────────
+    // Default: send email
     const { to, subject, html, replyTo } = body
     if (!to || !subject || !html) return json({ error: "Missing to/subject/html" }, 400)
     const data = await sendEmail(to, subject, html, replyTo)
