@@ -470,3 +470,26 @@ CREATE POLICY "acefit_media_auth_update"
 CREATE POLICY "acefit_media_auth_delete"
   ON storage.objects FOR DELETE
   USING (bucket_id = 'acefit-media');
+
+-- ============================================================
+-- CUSTOM OTP TABLE (bypass Supabase Auth email)
+-- ============================================================
+DROP TABLE IF EXISTS custom_otps CASCADE;
+CREATE TABLE custom_otps (
+  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email      TEXT NOT NULL,
+  code       TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '10 minutes'),
+  used       BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_custom_otps_email ON custom_otps(email);
+
+-- Allow anyone to insert/read/update OTPs (needed for anon key)
+ALTER TABLE custom_otps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "otps_anon_all" ON custom_otps FOR ALL USING (true) WITH CHECK (true);
+
+-- Auto-cleanup old OTPs
+CREATE OR REPLACE FUNCTION delete_expired_otps() RETURNS void LANGUAGE sql AS $$
+  DELETE FROM custom_otps WHERE expires_at < NOW() OR used = true;
+$$;
