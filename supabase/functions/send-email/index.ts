@@ -1,17 +1,14 @@
 // supabase/functions/send-email/index.ts
 // Deploy: supabase functions deploy send-email --no-verify-jwt
-// Secrets needed:
-//   supabase secrets set RESEND_API_KEY=re_xxx
-//   supabase secrets set PAYSTACK_SECRET_KEY=sk_xxx
-//   supabase secrets set SVC_ROLE_KEY=eyJhbGci...service_role_key
+// Secrets: RESEND_API_KEY, PAYSTACK_SECRET_KEY, SVC_ROLE_KEY
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0"
 
 const RESEND_API_KEY      = Deno.env.get("RESEND_API_KEY") || ""
 const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") || ""
-const SUPABASE_URL        = Deno.env.get("SUPABASE_URL") || ""        // auto-set by Supabase
-const SUPABASE_SVC_KEY    = Deno.env.get("SVC_ROLE_KEY") || ""        // your service role key
+const SUPABASE_URL        = Deno.env.get("SUPABASE_URL") || ""
+const SUPABASE_SVC_KEY    = Deno.env.get("SVC_ROLE_KEY") || ""
 
 const FROM_EMAIL = "AceFit <support@acefits.store>"
 
@@ -26,7 +23,6 @@ const json = (data: unknown, status = 200) =>
     headers: { "Content-Type": "application/json", ...CORS },
   })
 
-// ── Send via Resend ──────────────────────────────────────────
 async function sendResendEmail(to: string, subject: string, html: string, replyTo?: string) {
   if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set")
   const payload: Record<string, unknown> = { from: FROM_EMAIL, to: [to], subject, html }
@@ -41,12 +37,10 @@ async function sendResendEmail(to: string, subject: string, html: string, replyT
   return data
 }
 
-// ── 6-digit OTP generator ────────────────────────────────────
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-// ── OTP email template ───────────────────────────────────────
 function otpEmailHtml(code: string): string {
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"/></head>
@@ -74,7 +68,6 @@ function otpEmailHtml(code: string): string {
 </body></html>`
 }
 
-// ── Verify Paystack ──────────────────────────────────────────
 async function verifyPaystack(reference: string) {
   if (!PAYSTACK_SECRET_KEY) throw new Error("PAYSTACK_SECRET_KEY not set")
   const res  = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
@@ -83,6 +76,13 @@ async function verifyPaystack(reference: string) {
   const data = await res.json()
   if (!res.ok || !data.status) throw new Error(data.message || "Paystack verify failed")
   return data.data
+}
+
+// ── Find user by email using listUsers filter ────────────────
+async function findUserByEmail(db: ReturnType<typeof createClient>, email: string) {
+  const { data, error } = await db.auth.admin.listUsers({ perPage: 1000 })
+  if (error) return null
+  return data.users.find((u: { email: string }) => u.email === email) || null
 }
 
 serve(async (req) => {
@@ -97,16 +97,15 @@ serve(async (req) => {
     if (action === "send-otp") {
       const { email } = body
       if (!email) return json({ error: "email required" }, 400)
-
-      if (!SUPABASE_SVC_KEY) throw new Error("SVC_ROLE_KEY secret not set — run: supabase secrets set SVC_ROLE_KEY=...")
+      if (!SUPABASE_SVC_KEY) throw new Error("SVC_ROLE_KEY not set")
 
       const db   = createClient(SUPABASE_URL, SUPABASE_SVC_KEY)
       const code = generateOTP()
 
-      // Delete old OTPs for this email first
+      // Remove old OTPs for this email
       await db.from("custom_otps").delete().eq("email", email)
 
-      // Store new OTP (expires in 10 minutes)
+      // Insert new OTP
       const { error: insertErr } = await db.from("custom_otps").insert([{
         email,
         code,
@@ -124,12 +123,11 @@ serve(async (req) => {
     if (action === "verify-otp") {
       const { email, code } = body
       if (!email || !code) return json({ error: "email and code required" }, 400)
-
-      if (!SUPABASE_SVC_KEY) throw new Error("SVC_ROLE_KEY secret not set")
+      if (!SUPABASE_SVC_KEY) throw new Error("SVC_ROLE_KEY not set")
 
       const db = createClient(SUPABASE_URL, SUPABASE_SVC_KEY)
 
-      // Look up OTP — must match, be unused, and not expired
+      // Validate OTP
       const { data: record, error: fetchErr } = await db
         .from("custom_otps")
         .select("*")
@@ -142,21 +140,19 @@ serve(async (req) => {
         .single()
 
       if (fetchErr || !record) {
-        console.log("OTP not found for:", email, "code:", code)
+        console.log("❌ OTP invalid for:", email)
         return json({ success: false, error: "Invalid or expired code" }, 400)
       }
 
-      // Mark as used immediately
+      // Mark OTP as used
       await db.from("custom_otps").update({ used: true }).eq("id", record.id)
 
-      // Check if user already exists
-      const { data: existingUser } = await db.auth.admin.getUserByEmail(email)
-      const isNewUser = !existingUser?.user
-
+      // Find or create user
+      const existingUser = await findUserByEmail(db, email)
+      const isNewUser    = !existingUser
       let userId: string
 
       if (isNewUser) {
-        // Create new confirmed user
         const { data: newUser, error: createErr } = await db.auth.admin.createUser({
           email,
           email_confirm: true,
@@ -164,12 +160,31 @@ serve(async (req) => {
         })
         if (createErr) throw new Error("Create user failed: " + createErr.message)
         userId = newUser.user.id
+        console.log("✅ New user created:", userId)
       } else {
-        userId = existingUser.user.id
+        userId = existingUser.id
+        console.log("✅ Existing user found:", userId)
       }
 
-      console.log("✅ OTP verified for:", email, "userId:", userId)
-      return json({ success: true, userId, email, isNewUser })
+      // Create a session for the user
+      const { data: linkData, error: linkErr } = await db.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      })
+
+      // Return session token if available, else just userId
+      const accessToken  = linkData?.properties?.access_token || null
+      const refreshToken = linkData?.properties?.refresh_token || null
+
+      console.log("✅ OTP verified for:", email)
+      return json({
+        success:      true,
+        userId,
+        email,
+        isNewUser,
+        accessToken,
+        refreshToken,
+      })
     }
 
     // ── VERIFY PAYMENT ───────────────────────────────────────

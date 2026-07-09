@@ -2,11 +2,9 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Mail, Loader, CheckCircle, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { emailTemplates } from '../lib/emailTemplates'
 import { useStore } from '../lib/store'
 import toast from 'react-hot-toast'
 
-// ── Call our edge function directly ─────────────────────────
 const callEdge = async (action, body) => {
   const { data, error } = await supabase.functions.invoke('send-email', {
     body: { action, ...body }
@@ -25,7 +23,6 @@ export default function AuthModal({ open, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
-  // ── Step 1: Send OTP via our edge function → Resend ─────────
   const handleSendOTP = async (e) => {
     e?.preventDefault()
     if (!email.trim()) return
@@ -41,53 +38,46 @@ export default function AuthModal({ open, onClose }) {
     } finally { setLoading(false) }
   }
 
-  // ── Step 2: Verify OTP via edge function then sign in ────────
   const handleVerifyOTP = async (e) => {
     e.preventDefault()
-    if (!otp || otp.length < 6) return setError('Please enter the full code')
+    if (!otp || otp.length < 6) return setError('Please enter the full 6-digit code')
     setLoading(true)
     setError('')
     try {
-      // Verify OTP via edge function (which uses service role)
       const result = await callEdge('verify-otp', {
         email: email.trim().toLowerCase(),
-        code: otp.trim(),
+        code:  otp.trim(),
       })
 
       if (!result.success) throw new Error(result.error || 'Verification failed')
 
-      // Now sign the user in via Supabase Auth OTP (code already verified above,
-      // so just use signInWithPassword fallback — create passwordless session)
-      // Use admin-generated magic link approach
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: { shouldCreateUser: true }
-      })
-
-      // Even if supabase email fails here, we consider them verified
-      // because our edge function already validated the code
-      // Set user manually in store from edge function result
-      if (signInError) {
-        // Fallback: create a minimal user object from what we know
+      // If edge function returned tokens, set the Supabase session directly
+      if (result.accessToken && result.refreshToken) {
+        const { data: sessionData, error: sessionErr } = await supabase.auth.setSession({
+          access_token:  result.accessToken,
+          refresh_token: result.refreshToken,
+        })
+        if (!sessionErr && sessionData?.user) {
+          setUser(sessionData.user)
+        } else {
+          // Fallback: set minimal user from edge function response
+          setUser({
+            id:             result.userId,
+            email:          result.email,
+            user_metadata:  { email: result.email },
+          })
+        }
+      } else {
+        // No tokens returned — set minimal user object
         setUser({
-          id: result.userId,
-          email: result.email,
+          id:            result.userId,
+          email:         result.email,
           user_metadata: { email: result.email },
         })
       }
 
       setStep('success')
-
-      // Send welcome email for new users
-      if (result.isNewUser) {
-        try {
-          await callEdge('send-email', {
-            to: email,
-            subject: 'Welcome to AceFit 🔥',
-            html: `<h2 style="color:#FF6B00">Welcome to AceFit!</h2><p>Your account has been created. Start shopping at <a href="https://acefits.store">acefits.store</a></p>`
-          })
-        } catch (_) {}
-      }
+      toast.success(result.isNewUser ? 'Account created! Welcome 🎉' : 'Signed in! Welcome back 👋')
 
       setTimeout(() => {
         onClose()
@@ -95,7 +85,7 @@ export default function AuthModal({ open, onClose }) {
         setEmail('')
         setOtp('')
         setError('')
-      }, 1600)
+      }, 1500)
 
     } catch (err) {
       console.error('Verify OTP error:', err)
@@ -171,6 +161,7 @@ export default function AuthModal({ open, onClose }) {
                     className="w-full py-3.5 bg-brand-orange hover:bg-brand-orange-light text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-orange/25 disabled:opacity-60 active:scale-95">
                     {loading ? <><Loader size={16} className="animate-spin"/> Sending…</> : 'Send Code →'}
                   </button>
+
                   <p className={`text-center text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
                     New here? Account created automatically. No password needed.
                   </p>
@@ -223,7 +214,8 @@ export default function AuthModal({ open, onClose }) {
             {/* ── Success step ── */}
             {step === 'success' && (
               <div className="text-center py-4">
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12 }}>
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  transition={{ type: 'spring', damping: 12 }}>
                   <CheckCircle size={56} className="text-green-400 mx-auto mb-4"/>
                 </motion.div>
                 <h2 className={`font-display text-3xl mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>WELCOME!</h2>
