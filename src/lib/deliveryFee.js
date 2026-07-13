@@ -10,7 +10,7 @@ export const FALLBACK_ZONES = [
   { id: 'zone-e', name: 'Northwest / Northeast',       states: ['kano','kaduna','katsina','sokoto','kebbi','zamfara','jigawa','bauchi','gombe','yobe','borno','adamawa','taraba'], fee: 4500, eta: '4–6 days' },
 ]
 
-export const FREE_DELIVERY_THRESHOLD = 50000
+export const FREE_DELIVERY_THRESHOLD = 999999999
 
 let _cachedZones = null
 
