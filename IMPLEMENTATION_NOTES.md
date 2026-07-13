@@ -1,7 +1,3 @@
-# AceFit — Update notes
-
-This build implements the five requested changes. Nothing existing was removed;
-the delivery zones you already had keep working as the default.
 
 ## 1. Mobile responsiveness / "can't tap checkout"
 The cart and checkout drawers used `h-full`, which on phones renders taller than
